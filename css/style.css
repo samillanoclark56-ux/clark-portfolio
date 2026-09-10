@@ -1,0 +1,567 @@
+html {
+    scroll-behavior: smooth;
+}
+
+h1 {
+    color: white;
+    font-size: 60px;
+    text-align: center;
+}
+
+h2 {
+    color: white;
+}
+
+ul {
+    color: white;
+}
+
+p {
+    color: white;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0;
+    background-image: url("../images/mountain.png");
+    background-size: cover;
+    background-attachment: fixed;
+    background-position: center;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* NAVIGATION */
+
+nav {
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    background: rgba(10, 15, 25, 0.35);
+    backdrop-filter: blur(10px);
+
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 10;
+
+    padding: 20px 6%;
+
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    font-family: 'Montserrat', sans-serif;
+
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+nav a:hover {
+    color: #4da3ff;
+    transform: translateY(-2px);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+}
+
+.logo img {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    display: block;
+}
+
+.nav-links {
+    display: flex;
+    gap: 30px;
+}
+
+/* HERO */
+
+.hero {
+    width: 100%;
+    height: 100vh;
+    background: transparent;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.hero h1,
+.hero .hero-subtitle,
+.hero .hero-label {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.hero-subtitle {
+    font-size: 24px;
+    margin: 10px;
+}
+
+.hero-label {
+    font-size: 14px;
+    letter-spacing: 6px;
+    margin: 0 0 15px 0;
+    font-family: Montserrat, sans-serif;
+}
+
+/* SCROLL DOWN */
+
+.scroll-down {
+    position: absolute;
+    right: 50px;
+    bottom: 30px;
+    text-align: center;
+
+    animation: scrollMove 2s ease-in-out infinite;
+    transition: opacity 1s ease;
+}
+
+@keyframes scrollMove {
+    0% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(10px);
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.mouse {
+    display: block;
+    width: 20px;
+    height: 32px;
+    border: 2px solid white;
+    border-radius: 12px;
+    margin: 0 auto 10px;
+}
+
+.mouse::before {
+    content: "";
+    display: block;
+    width: 3px;
+    height: 7px;
+    background: white;
+    border-radius: 3px;
+    margin: 6px auto;
+}
+
+/* ABOUT */
+
+#about {
+    width: 75%;
+    max-width: 850px;
+    min-height: 100vh;
+
+    margin: 80px auto;
+    padding: 80px 60px;
+    box-sizing: border-box;
+
+    background: rgba(80, 80, 80, 0.45);
+    border-radius: 25px;
+    backdrop-filter: blur(5px);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+
+    position: relative;
+    z-index: 2;
+
+    text-align: center;
+
+    opacity: 0;
+    transform: translateY(50px);
+
+    transition:
+        opacity 1s ease,
+        transform 1s ease;
+}
+
+#about.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.section-label {
+    letter-spacing: 6px;
+    font-size: 14px;
+}
+
+.about-title {
+    font-size: 60px;
+    margin: 15px 0 30px;
+}
+
+.about-title span,
+.about-content h3 span {
+    color: #4da3ff;
+}
+
+.about-content img {
+    width: 260px;
+    height: 260px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid #4da3ff;
+}
+
+.about-content h3 {
+    font-size: 42px;
+    margin: 20px 0 5px;
+}
+
+.passionate {
+    font-size: 20px;
+    letter-spacing: 6px;
+}
+
+.about-text {
+    max-width: 800px;
+    margin: 30px auto;
+    font-size: 18px;
+    line-height: 1.8;
+}
+
+/* ABOUT CARDS */
+
+.about-cards {
+    width: 100%;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+
+    margin-top: 30px;
+}
+
+.about-card {
+    background: rgba(20, 35, 50, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+
+    padding: 25px 15px;
+    text-align: center;
+
+    transition:
+        transform 0.3s ease,
+        border-color 0.3s ease;
+}
+
+.about-card i {
+    color: #4da3ff;
+    font-size: 32px;
+}
+
+.about-card h4 {
+    color: white;
+    font-size: 16px;
+    margin: 15px 0 5px;
+}
+
+.about-card p {
+    color: #bbb;
+    font-size: 13px;
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+.about-card:hover {
+    transform: translateY(-8px);
+    border-color: #4da3ff;
+}
+
+/* SKILLS */
+
+#skills {
+    width: 75%;
+    max-width: 1000px;
+
+    margin: 80px auto;
+    padding: 80px 60px;
+    box-sizing: border-box;
+
+    text-align: center;
+
+    position: relative;
+    z-index: 2;
+}
+
+.skills-title {
+    color: white;
+    font-size: 48px;
+    margin: 15px 0 40px;
+}
+
+.skills-title span {
+    color: #4da3ff;
+}
+
+.skills-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.skill-card {
+    background: rgba(20, 35, 50, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+
+    padding: 35px 20px;
+
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25);
+
+    transition:
+        transform 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.skill-card i {
+    color: #4da3ff;
+    font-size: 42px;
+}
+
+.skill-card h3 {
+    color: white;
+    font-size: 18px;
+    margin-top: 18px;
+}
+
+.skill-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    border-color: #4da3ff;
+    box-shadow: 0 0 35px rgba(77, 163, 255, 0.7);
+}
+
+/* CONTACT */
+
+#contact {
+    width: 75%;
+    max-width: 1000px;
+
+    margin: 80px auto;
+    padding: 80px 60px;
+    box-sizing: border-box;
+
+    text-align: center;
+
+    position: relative;
+    z-index: 2;
+}
+
+.contact-title {
+    color: white;
+    font-size: 48px;
+    margin: 15px 0 40px;
+}
+
+.contact-title span {
+    color: #4da3ff;
+}
+
+.contact-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.contact-card {
+    background: rgba(20, 35, 50, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+
+    padding: 35px 20px;
+
+    text-decoration: none;
+
+    transition:
+        transform 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.contact-card i {
+    color: #4da3ff;
+    font-size: 38px;
+}
+
+.contact-card h3 {
+    color: white;
+    font-size: 18px;
+    margin: 18px 0 10px;
+}
+
+.contact-card p {
+    color: #bbb;
+    font-size: 14px;
+    margin: 0;
+}
+
+.contact-card:hover {
+    transform: translateY(-8px);
+    border-color: #4da3ff;
+    box-shadow: 0 0 30px rgba(77, 163, 255, 0.5);
+}
+
+/* FOOTER */
+
+footer {
+    width: 100%;
+    padding: 25px 0;
+
+    text-align: center;
+
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+footer p {
+    color: #888;
+    font-size: 13px;
+    margin: 0;
+}
+
+/* MOBILE */
+
+@media (max-width: 600px) {
+
+    .hero h1 {
+        font-size: 42px;
+    }
+
+    .hero-subtitle {
+        font-size: 18px;
+    }
+
+    .hero-label {
+        font-size: 11px;
+        letter-spacing: 4px;
+    }
+
+    .logo img {
+        width: 30px;
+        height: 30px;
+    }
+
+    .nav-links {
+        gap: 15px;
+    }
+
+    nav a {
+        font-size: 13px;
+    }
+
+    #about {
+        width: 90%;
+        padding: 60px 25px;
+    }
+
+    .about-title {
+        font-size: 40px;
+    }
+
+    .about-content h3 {
+        font-size: 28px;
+    }
+
+    .passionate {
+        font-size: 14px;
+        letter-spacing: 3px;
+    }
+
+    .about-text {
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .about-content img {
+        width: 200px;
+        height: 200px;
+    }
+
+    .about-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .about-card {
+        padding: 20px 10px;
+    }
+
+    .about-card i {
+        font-size: 26px;
+    }
+
+    .about-card h4 {
+        font-size: 14px;
+    }
+
+    .about-card p {
+        font-size: 11px;
+    }
+
+    #skills {
+        width: 90%;
+        padding: 60px 20px;
+    }
+
+    .skills-title {
+        font-size: 38px;
+    }
+
+    .skills-cards {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .skill-card {
+        padding: 25px 10px;
+    }
+
+    .skill-card i {
+        font-size: 32px;
+    }
+
+    .skill-card h3 {
+        font-size: 14px;
+    }
+
+    #contact {
+        width: 90%;
+        padding: 60px 20px;
+    }
+
+    .contact-title {
+        font-size: 38px;
+    }
+
+    .contact-cards {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .contact-card {
+        padding: 30px 15px;
+    }
+}
