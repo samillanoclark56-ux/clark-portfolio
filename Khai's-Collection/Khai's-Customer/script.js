@@ -128,8 +128,27 @@ function displayProducts(list=products){
   productsContainer.innerHTML="";
   if(!list.length){emptyProducts.style.display="block";productTotal.textContent="0 items";return}
   emptyProducts.style.display="none";productTotal.textContent=`${list.length} ${list.length===1?"item":"items"}`;
-  list.forEach(product=>{const card=document.createElement("article");card.className="product-card";card.innerHTML=`<div class="product-image">${product.category==="New"?'<span class="badge">NEW</span>':""}<img src="${product.image}" alt="${product.name}" loading="lazy"><button class="quick-add" data-id="${product.id}">QUICK VIEW</button></div><div class="product-info"><span class="product-category">${product.category}</span><h3 class="product-name">${product.name}</h3><div class="product-price">${formatPrice(product.price)}</div></div>`;productsContainer.appendChild(card)});
-  document.querySelectorAll(".quick-add").forEach(b=>b.addEventListener("click",()=>openProduct(b.dataset.id)));
+  list.forEach(product=>{
+    const card=document.createElement("article");
+    card.className="product-card";
+    card.dataset.id=product.id;
+    card.innerHTML=`<div class="product-image">${product.category==="New"?'<span class="badge">NEW</span>':""}<img src="${product.image}" alt="${product.name}" loading="lazy"><button type="button" class="quick-add" data-id="${product.id}">QUICK VIEW</button></div><div class="product-info"><span class="product-category">${product.category}</span><h3 class="product-name">${product.name}</h3><div class="product-price">${formatPrice(product.price)}</div></div>`;
+
+    // Make the entire product card tappable on phones/tablets and clickable on desktop.
+    card.addEventListener("click", event=>{
+      if(event.target.closest(".quick-add")) return;
+      openProduct(product.id);
+    });
+
+    productsContainer.appendChild(card);
+  });
+
+  document.querySelectorAll(".quick-add").forEach(b=>{
+    b.addEventListener("click", event=>{
+      event.stopPropagation();
+      openProduct(b.dataset.id);
+    });
+  });
 }
 function filterProducts(){const input=document.getElementById("searchInput");const term=input?input.value.toLowerCase().trim():"";displayProducts(products.filter(p=>(currentCategory==="All"||p.category===currentCategory)&&(p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term))))}
 document.querySelectorAll(".category").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".category").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentCategory=b.dataset.category;filterProducts()}));
