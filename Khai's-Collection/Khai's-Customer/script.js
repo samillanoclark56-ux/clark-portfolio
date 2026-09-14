@@ -61,7 +61,7 @@ const FEEDBACKS = [
 
 let cart=JSON.parse(localStorage.getItem("khaiCart"))||[],currentProduct=null,currentQuantity=1,selectedSize="",currentCategory="All",currentUser=null,currentProfile=null;
 const productsContainer=document.getElementById("products"),productTotal=document.getElementById("productTotal"),emptyProducts=document.getElementById("emptyProducts"),cartCount=document.getElementById("cartCount"),cartItems=document.getElementById("cartItems"),subtotal=document.getElementById("subtotal"),cartPanel=document.querySelector(".cart"),cartOverlay=document.getElementById("cartOverlay"),productModal=document.getElementById("productModal"),checkoutOverlay=document.getElementById("checkoutOverlay"),successOverlay=document.getElementById("successOverlay");
-const accountOverlay=document.getElementById("accountOverlay"),accountLoggedOut=document.getElementById("accountLoggedOut"),accountLoggedIn=document.getElementById("accountLoggedIn"),profileForm=document.getElementById("profileForm"),loginForm=document.getElementById("loginForm"),signupForm=document.getElementById("signupForm"),accountLabel=document.getElementById("accountLabel");
+const accountOverlay=document.getElementById("accountOverlay"),accountLoggedOut=document.getElementById("accountLoggedOut"),accountLoggedIn=document.getElementById("accountLoggedIn"),profileForm=document.getElementById("profileForm"),loginForm=document.getElementById("loginForm"),signupForm=document.getElementById("signupForm"),accountLabel=document.getElementById("accountLabel"),profilePhotoInput=document.getElementById("profilePhotoInput"),profileUploadPreview=document.getElementById("profileUploadPreview");
 const customerOrdersContainer=document.getElementById("customerOrders"),ordersLoginHint=document.getElementById("ordersLoginHint");
 const customerName=document.getElementById("customerName"),customerPhone=document.getElementById("customerPhone"),customerAddress=document.getElementById("customerAddress"),paymentMethod=document.getElementById("paymentMethod");
 const formatPrice=p=>"₱"+Number(p).toLocaleString("en-PH");
@@ -85,6 +85,7 @@ function statusStep(status){
 }
 
 function statusLabel(status){
+  if(status==="Cancelled")return "Cancelled";
   if(status==="Completed")return "Delivered";
   if(status==="Shipped")return "Delivery on the way";
   return "Preparing";
@@ -107,7 +108,8 @@ function renderCustomerOrders(){
     const total=formatPrice(o.total||0);
     const date=o.date?new Date(o.date).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}):"";
     const items=(o.items||[]).map(i=>`<div class="order-product"><img src="${i.image||""}" alt="${i.name||"Product"}"><div><strong>${i.name||"Product"}</strong><small>Size ${i.size||"—"} · Qty ${i.quantity||0}</small></div><b>${formatPrice(Number(i.price||0)*Number(i.quantity||0))}</b></div>`).join("");
-    return `<article class="customer-order"><div class="order-top"><div><span class="order-id">${o.id}</span><small>${date}</small></div><strong>${total}</strong></div><div class="order-products">${items}</div><div class="order-tracker"><div class="tracker-line"><span class="tracker-progress step-${step}"></span></div><div class="tracker-step ${step>=1?"active":""}"><span>1</span><small>Preparing</small></div><div class="tracker-step ${step>=2?"active":""}"><span>2</span><small>Delivery on the way</small></div><div class="tracker-step ${step>=3?"active":""}"><span>3</span><small>Delivered</small></div></div><div class="order-status-text">Status: <strong>${statusLabel(o.status)}</strong></div></article>`;
+    const cancelled=o.status==="Cancelled";
+    return `<article class="customer-order ${cancelled?"order-cancelled":""}"><div class="order-top"><div><span class="order-id">${o.id}</span><small>${date}</small></div><strong>${total}</strong></div><div class="order-products">${items}</div>${cancelled?`<div class="customer-cancelled"><strong>Order Cancelled</strong><span>${o.cancellationReason||"This order was cancelled by the store."}</span></div>`:`<div class="order-tracker"><div class="tracker-line"><span class="tracker-progress step-${step}"></span></div><div class="tracker-step ${step>=1?"active":""}"><span>1</span><small>Preparing</small></div><div class="tracker-step ${step>=2?"active":""}"><span>2</span><small>Delivery on the way</small></div><div class="tracker-step ${step>=3?"active":""}"><span>3</span><small>Delivered</small></div></div>`}<div class="order-status-text ${cancelled?"cancelled-status":""}">Status: <strong>${statusLabel(o.status)}</strong></div></article>`;
   }).join("");
 }
 
@@ -155,37 +157,94 @@ function subscribeCustomerOrders(){
   },true);
 })();
 
-function displayProducts(list=products){
-  productsContainer.innerHTML="";
-  if(!list.length){emptyProducts.style.display="block";productTotal.textContent="0 items";return}
-  emptyProducts.style.display="none";productTotal.textContent=`${list.length} ${list.length===1?"item":"items"}`;
-  list.forEach(product=>{
-    const card=document.createElement("article");
-    card.className="product-card";
-    card.dataset.id=product.id;
-    card.innerHTML=`<div class="product-image">${product.category==="New"?'<span class="badge">NEW</span>':""}<img src="${product.image}" alt="${product.name}" loading="lazy"><button type="button" class="quick-add" data-id="${product.id}">QUICK VIEW</button></div><div class="product-info"><span class="product-category">${product.category}</span><h3 class="product-name">${product.name}</h3><div class="product-price">${formatPrice(product.price)}</div></div>`;
+function productCardMarkup(product){
+  return `<article class="product-card" data-id="${product.id}">
+    <div class="product-image">
+      <img src="${product.image||""}" alt="${product.name||"Product"}" loading="lazy">
+      <button type="button" class="quick-add" data-id="${product.id}">QUICK VIEW</button>
+    </div>
+    <div class="product-info">
+      <span class="product-category">${product.category||"Collection"}</span>
+      <h3 class="product-name">${product.name||"Product"}</h3>
+      <div class="product-price">${formatPrice(product.price)}</div>
+    </div>
+  </article>`;
+}
 
-    // Make the entire product card tappable on phones/tablets and clickable on desktop.
-    card.addEventListener("click", event=>{
-      if(event.target.closest(".quick-add")) return;
-      openProduct(product.id);
+function bindProductCards(container){
+  if(!container)return;
+  container.querySelectorAll(".product-card").forEach(card=>{
+    card.addEventListener("click",event=>{
+      if(event.target.closest(".quick-add"))return;
+      openProduct(card.dataset.id);
     });
-
-    productsContainer.appendChild(card);
   });
-
-  document.querySelectorAll(".quick-add").forEach(b=>{
-    b.addEventListener("click", event=>{
+  container.querySelectorAll(".quick-add").forEach(button=>{
+    button.addEventListener("click",event=>{
       event.stopPropagation();
-      openProduct(b.dataset.id);
+      openProduct(button.dataset.id);
     });
   });
 }
-function filterProducts(){const input=document.getElementById("searchInput");const term=input?input.value.toLowerCase().trim():"";displayProducts(products.filter(p=>(currentCategory==="All"||p.category===currentCategory)&&(p.name.toLowerCase().includes(term)||p.category.toLowerCase().includes(term))))}
-document.querySelectorAll(".category").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".category").forEach(x=>x.classList.remove("active"));b.classList.add("active");currentCategory=b.dataset.category;filterProducts()}));
+
+function displayProducts(list=products){
+  productsContainer.innerHTML="";
+  if(!list.length){emptyProducts.style.display="block";productTotal.textContent="0 items";return}
+  emptyProducts.style.display="none";
+  productTotal.textContent=`${list.length} ${list.length===1?"item":"items"}`;
+  productsContainer.innerHTML=list.map(productCardMarkup).join("");
+  bindProductCards(productsContainer);
+}
+
+const ALBUMS=[
+  {key:"Tops",title:"Tops",subtitle:"Easy pieces for every day."},
+  {key:"Dresses",title:"Dresses",subtitle:"Feminine pieces for every moment."},
+  {key:"Bottoms",title:"Bottoms",subtitle:"Build your look from the bottom up."},
+  {key:"Sets",title:"Sets",subtitle:"Complete looks, made simple."}
+];
+
+function renderAlbums(){
+  const container=document.getElementById("collectionAlbums");
+  if(!container)return;
+  const available=ALBUMS.filter(album=>products.some(p=>p.category===album.key));
+  if(!available.length){
+    container.innerHTML='<div class="albums-empty"><h3>Collection coming soon</h3><p>New pieces will appear here.</p></div>';
+    return;
+  }
+  container.innerHTML=available.map(album=>{
+    const items=products.filter(p=>p.category===album.key).slice(0,4);
+    return `<section class="album" id="album-${album.key.toLowerCase().replace(/[^a-z0-9]+/g,"-")}">
+      <div class="album-head">
+        <div><p class="eyebrow">${album.key==="New"?"JUST IN":"COLLECTION"}</p><h3>${album.title}</h3><p>${album.subtitle}</p></div>
+        <button class="album-view-all" type="button" data-category="${album.key}">View All <span>→</span></button>
+      </div>
+      <div class="album-products">${items.map(productCardMarkup).join("")}</div>
+    </section>`;
+  }).join("");
+  container.querySelectorAll(".album").forEach(album=>bindProductCards(album));
+  container.querySelectorAll(".album-view-all").forEach(button=>button.addEventListener("click",()=>showAllProducts(button.dataset.category)));
+}
+
+function showAllProducts(category="All"){
+  const section=document.getElementById("allProducts");
+  if(!section)return;
+  section.classList.remove("hidden-catalog");
+  const title=section.querySelector("h2");
+  const eyebrow=section.querySelector(".eyebrow");
+  const list=category==="All"?products:products.filter(p=>p.category===category);
+  if(title)title.textContent=category==="All"?"Shop All":category;
+  if(eyebrow)eyebrow.textContent=category==="All"?"ALL ITEMS":"COLLECTION";
+  displayProducts(list);
+  section.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function filterProducts(){displayProducts(products)}
 const searchInput=document.getElementById("searchInput");
 if(searchInput){searchInput.addEventListener("input",filterProducts);}
 document.getElementById("menuBtn").addEventListener("click",()=>document.querySelector(".nav-links").classList.toggle("open"));document.querySelectorAll(".nav-links a").forEach(a=>a.addEventListener("click",()=>document.querySelector(".nav-links").classList.remove("open")));
+document.getElementById("viewAllBtn")?.addEventListener("click",()=>showAllProducts("All"));
+document.querySelectorAll(".nav-links a[href=\"#shop\"]").forEach(a=>a.addEventListener("click",()=>setTimeout(()=>showAllProducts("All"),50)));
+
 function getProductSizes(product){
   const sizes=Array.isArray(product?.sizes)?product.sizes.filter(Boolean):[];
   return sizes.length?sizes:["S","M","L","XL"];
@@ -233,75 +292,61 @@ document.getElementById("closeCheckout").addEventListener("click",()=>checkoutOv
 
 document.getElementById("checkoutForm").addEventListener("submit",async e=>{
   e.preventDefault();
-  if(!currentUser){showError("Please login first.");return}
-  if(!cart.length){showError("Your cart is empty.");return}
+  if(!currentUser){showError("Please login first.");return;}
+  if(!cart.length){showError("Your cart is empty.");return;}
 
   const orderId="KH"+Date.now().toString().slice(-6)+Math.random().toString(36).slice(2,6).toUpperCase();
-  const items=cart.map(i=>({
-    id:i.id,name:i.name,price:Number(i.price||0),cost:Number(i.cost||0),
-    image:i.image,size:i.size,quantity:Number(i.quantity||0)
-  }));
-  const total=items.reduce((s,i)=>s+i.price*i.quantity,0);
-  const order={
-    id:orderId,
-    customer:{
-      uid:currentUser.uid,
-      name:customerName.value.trim(),
-      phone:customerPhone.value.trim(),
-      address:customerAddress.value.trim(),
-      payment:paymentMethod.value
-    },
-    items,total,createdAt:serverTimestamp(),date:new Date().toISOString(),status:"Pending"
-  };
+  const orderItems=cart.map(i=>({id:i.id,name:i.name,price:Number(i.price||0),cost:Number(i.cost||0),image:i.image,size:i.size,quantity:Number(i.quantity||0)}));
+  const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+  const orderRef=doc(db,"orders",orderId);
 
   try{
     await runTransaction(db,async transaction=>{
-      const productRefs=[...new Map(items.map(i=>[i.id,i])).values()].map(i=>doc(db,"products",i.id));
+      const uniqueIds=[...new Set(orderItems.map(i=>i.id))];
+      const productRefs=uniqueIds.map(id=>doc(db,"products",id));
       const snapshots=[];
-      for(const ref of productRefs) snapshots.push(await transaction.get(ref));
+      for(const ref of productRefs)snapshots.push(await transaction.get(ref));
 
-      const byId=new Map(snapshots.map(s=>[s.id,s]));
-      for(const item of items){
-        const snap=byId.get(item.id);
-        if(!snap||!snap.exists()) throw new Error(`PRODUCT_UNAVAILABLE:${item.name}`);
-        const p=snap.data();
-        const stock=Math.max(0,Number(p.stock||0));
-        if(p.visible===false||stock<=0) throw new Error(`SOLD_OUT:${item.name}`);
-        if(item.quantity>stock) throw new Error(`INSUFFICIENT:${item.name}:${stock}`);
+      const stockMap={};
+      snapshots.forEach((snap,index)=>{
+        const id=uniqueIds[index];
+        if(!snap.exists())throw new Error(`PRODUCT_NOT_FOUND:${id}`);
+        const data=snap.data();
+        const stock=Math.max(0,Number(data.stock||0));
+        if(data.visible===false||stock<=0)throw new Error(`SOLD_OUT:${id}`);
+        stockMap[id]={ref:productRefs[index],data,stock};
+      });
+
+      for(const item of orderItems){
+        const record=stockMap[item.id];
+        if(!record)throw new Error(`PRODUCT_NOT_FOUND:${item.id}`);
+        const requested=Number(item.quantity||0);
+        if(requested<1||requested>record.stock)throw new Error(`INSUFFICIENT_STOCK:${item.id}:${record.stock}`);
+        record.stock-=requested;
       }
 
-      transaction.set(doc(db,"orders",orderId),order);
-
-      for(const item of items){
-        const snap=byId.get(item.id);
-        const p=snap.data();
-        const nextStock=Math.max(0,Number(p.stock||0)-item.quantity);
-        transaction.update(doc(db,"products",item.id),{
-          stock:nextStock,
-          visible:nextStock>0,
-          updatedAt:serverTimestamp()
-        });
-      }
+      const order={
+        id:orderId,
+        customer:{uid:currentUser.uid,name:customerName.value.trim(),phone:customerPhone.value.trim(),address:customerAddress.value.trim(),payment:paymentMethod.value,photoURL:currentProfile?.photoURL||currentUser.photoURL||""},
+        items:orderItems,
+        total,
+        createdAt:serverTimestamp(),
+        date:new Date().toISOString(),
+        status:"Pending"
+      };
+      transaction.set(orderRef,order);
+      Object.values(stockMap).forEach(record=>transaction.update(record.ref,{stock:record.stock,visible:record.stock>0,updatedAt:serverTimestamp()}));
     });
 
-    cart=[];saveCart();updateCart();
-    checkoutOverlay.classList.remove("show");
-    successOverlay.classList.add("show");
-    e.target.reset();
+    cart=[];saveCart();updateCart();checkoutOverlay.classList.remove("show");successOverlay.classList.add("show");e.target.reset();
   }catch(error){
     console.error("Checkout transaction failed:",error);
-    const msg=String(error.message||"");
-    if(msg.startsWith("SOLD_OUT:")) showError(`${msg.replace("SOLD_OUT:","")} is already sold out.`);
-    else if(msg.startsWith("INSUFFICIENT:")){
-      const parts=msg.split(":");
-      showError(`${parts[1]} only has ${parts[2]} left. Please update your cart.`);
-    }else if(msg.startsWith("PRODUCT_UNAVAILABLE:")){
-      showError(`${msg.replace("PRODUCT_UNAVAILABLE:","")} is no longer available.`);
-    }else if(error.code==="permission-denied"){
-      showError("Checkout permission is not configured yet. Please update the Firestore rules included with this ZIP.");
-    }else{
-      showError("We couldn't place your order. Please try again.");
-    }
+    const message=String(error.message||"");
+    if(message.startsWith("SOLD_OUT:"))showError("Sorry, one of the items in your cart just sold out.");
+    else if(message.startsWith("INSUFFICIENT_STOCK:")){const parts=message.split(":");showError(`Only ${parts[2]||0} item${parts[2]==="1"?"":"s"} left for one of the items in your cart.`);}
+    else if(message.startsWith("PRODUCT_NOT_FOUND:"))showError("One of the items in your cart is no longer available.");
+    else if(error.code==="permission-denied")showError("We couldn't place the order because Firestore permissions need to be checked.");
+    else showError("We couldn't place your order. Please try again.");
   }
 });
 
@@ -316,12 +361,13 @@ document.getElementById("loginTab").addEventListener("click",()=>switchAccountTa
 
 document.querySelectorAll(".show-password").forEach(btn=>btn.addEventListener("click",()=>{const input=document.getElementById(btn.dataset.target);const visible=input.type==="text";input.type=visible?"password":"text";btn.textContent=visible?"Show":"Hide"}));
 async function applyPersistence(remember){await setPersistence(auth,remember?browserLocalPersistence:browserSessionPersistence)}
-async function saveCustomerProfile(user,details){const profile={uid:user.uid,name:details.name.trim(),phone:details.phone.trim(),address:details.address.trim(),email:user.email||"",photoURL:user.photoURL||"",updatedAt:serverTimestamp()};await setDoc(doc(db,"customers",user.uid),profile,{merge:true});currentProfile={...profile};}
+async function saveCustomerProfile(user,details){const profile={uid:user.uid,name:details.name.trim(),phone:details.phone.trim(),address:details.address.trim(),email:user.email||"",photoURL:details.photoURL!==undefined?details.photoURL:(currentProfile?.photoURL||user.photoURL||""),updatedAt:serverTimestamp()};await setDoc(doc(db,"customers",user.uid),profile,{merge:true});currentProfile={...currentProfile,...profile};}
 async function loadCustomerProfile(user){const snap=await getDoc(doc(db,"customers",user.uid));if(snap.exists()){currentProfile=snap.data();}else{currentProfile={name:user.displayName||"",phone:"",address:"",email:user.email||"",uid:user.uid}}return currentProfile}
 function hasCompleteProfile(){return !!(currentProfile&&currentProfile.name&&currentProfile.phone&&currentProfile.address)}
-function fillProfileForm(){document.getElementById("profileNameInput").value=currentProfile?.name||currentUser?.displayName||"";document.getElementById("profilePhoneInput").value=currentProfile?.phone||"";document.getElementById("profileAddressInput").value=currentProfile?.address||""}
+function renderProfilePhoto(url){const safeUrl=String(url||"");profileUploadPreview.innerHTML=safeUrl?`<img src="${safeUrl}" alt="Profile photo">`:`<span class="brown-emoji">👤</span>`;document.getElementById("profileAvatar").innerHTML=safeUrl?`<img src="${safeUrl}" alt="Profile photo">`:`<span class="brown-emoji">👤</span>`;}
+function fillProfileForm(){document.getElementById("profileNameInput").value=currentProfile?.name||currentUser?.displayName||"";document.getElementById("profilePhoneInput").value=currentProfile?.phone||"";document.getElementById("profileAddressInput").value=currentProfile?.address||"";profilePhotoInput.value="";renderProfilePhoto(currentProfile?.photoURL||currentUser?.photoURL||"")}
 function openProfileForm(){accountLoggedOut.classList.add("hidden");accountLoggedIn.classList.add("hidden");profileForm.classList.remove("hidden");fillProfileForm();accountOverlay.classList.add("show")}
-function showLoggedIn(){accountLoggedOut.classList.add("hidden");profileForm.classList.add("hidden");accountLoggedIn.classList.remove("hidden");document.getElementById("accountWelcome").textContent=`Welcome, ${currentProfile?.name||currentUser?.displayName||"Customer"}!`;document.getElementById("profileName").textContent=currentProfile?.name||currentUser?.displayName||"Customer";document.getElementById("profileEmail").textContent=currentUser?.email||"";document.getElementById("profilePhone").textContent=currentProfile?.phone||"—";document.getElementById("profileAddress").textContent=currentProfile?.address||"—";document.getElementById("profileAvatar").textContent=currentUser?.photoURL?"":"👤";accountLabel.textContent=(currentProfile?.name||currentUser?.displayName||"Account").split(" ")[0]}
+function showLoggedIn(){accountLoggedOut.classList.add("hidden");profileForm.classList.add("hidden");accountLoggedIn.classList.remove("hidden");document.getElementById("accountWelcome").textContent=`Welcome, ${currentProfile?.name||currentUser?.displayName||"Customer"}!`;document.getElementById("profileName").textContent=currentProfile?.name||currentUser?.displayName||"Customer";document.getElementById("profileEmail").textContent=currentUser?.email||"";document.getElementById("profilePhone").textContent=currentProfile?.phone||"—";document.getElementById("profileAddress").textContent=currentProfile?.address||"—";const photo=currentProfile?.photoURL||currentUser?.photoURL||"";renderProfilePhoto(photo);const headerAvatar=document.getElementById("headerAvatar");if(headerAvatar)headerAvatar.innerHTML=photo?`<img src="${photo}" alt="Profile photo">`:`<span class="brown-emoji">👤</span>`;accountLabel.textContent=(currentProfile?.name||currentUser?.displayName||"Account").split(" ")[0]}
 
 document.getElementById("loginForm").addEventListener("submit",async e=>{
  e.preventDefault();const email=loginEmail.value.trim(),password=loginPassword.value,remember=rememberLogin.checked;
@@ -345,7 +391,11 @@ async function googleLogin(){
 }
 document.getElementById("googleLoginBtn").addEventListener("click",googleLogin);document.getElementById("googleSignupBtn").addEventListener("click",googleLogin);
 
-document.getElementById("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;try{await updateProfile(currentUser,{displayName:profileNameInput.value.trim()});await saveCustomerProfile(currentUser,{name:profileNameInput.value,phone:profilePhoneInput.value,address:profileAddressInput.value});showLoggedIn()}catch(error){console.error(error);showError("Couldn't save your details. Please try again.")}});
+profilePhotoInput.addEventListener("change",e=>{const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith("image/")){showError("Please choose an image file.");e.target.value="";return}if(file.size>5*1024*1024){showError("Profile photo is too large. Please choose an image under 5MB.");e.target.value="";return}const url=URL.createObjectURL(file);profileUploadPreview.innerHTML=`<img src="${url}" alt="Profile photo preview">`;});
+
+async function uploadProfilePhoto(file){const formData=new FormData();formData.append("file",file);formData.append("upload_preset","Khai's_products");formData.append("folder","khai-profiles");const response=await fetch("https://api.cloudinary.com/v1_1/zeuidhev/image/upload",{method:"POST",body:formData});if(!response.ok){console.error("Profile photo upload failed:",await response.text());throw new Error("Profile photo upload failed.")}const uploaded=await response.json();if(!uploaded.secure_url)throw new Error("Cloudinary did not return a profile photo URL.");return uploaded.secure_url}
+
+document.getElementById("profileForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser)return;try{const file=profilePhotoInput.files?.[0];let photoURL=currentProfile?.photoURL||currentUser.photoURL||"";if(file)photoURL=await uploadProfilePhoto(file);await updateProfile(currentUser,{displayName:profileNameInput.value.trim(),photoURL});await saveCustomerProfile(currentUser,{name:profileNameInput.value,phone:profilePhoneInput.value,address:profileAddressInput.value,photoURL});showLoggedIn()}catch(error){console.error(error);showError("Couldn't save your details. Please try again.")}});
 document.getElementById("editProfileBtn").addEventListener("click",openProfileForm);
 document.getElementById("logoutBtn").addEventListener("click",async()=>{try{await signOut(auth);closeAccount()}catch(error){showError("Couldn't logout. Please try again.")}});
 
@@ -356,7 +406,7 @@ onAuthStateChanged(auth,async user=>{
    subscribeCustomerOrders();
    if(!hasCompleteProfile()){accountLabel.textContent="Account";if(document.body.dataset.accountNeedsProfile==="1")openProfileForm();}
    else{showLoggedIn();}
- }else{currentProfile=null;customerOrders=[];subscribeCustomerOrders();accountLabel.textContent="Account";}
+ }else{currentProfile=null;customerOrders=[];subscribeCustomerOrders();const headerAvatar=document.getElementById("headerAvatar");if(headerAvatar)headerAvatar.innerHTML=`<span class="brown-emoji">👤</span>`;accountLabel.textContent="Account";}
 });
 
 onSnapshot(query(collection(db,"products"),where("visible","==",true)),(snapshot)=>{
@@ -365,6 +415,7 @@ onSnapshot(query(collection(db,"products"),where("visible","==",true)),(snapshot
     const ta=a.createdAt?.toMillis?.()||0, tb=b.createdAt?.toMillis?.()||0;
     return tb-ta;
   });
+  renderAlbums();
   filterProducts();
 },(error)=>{
   console.error("Products listener error:",error);
@@ -372,4 +423,4 @@ onSnapshot(query(collection(db,"products"),where("visible","==",true)),(snapshot
   filterProducts();
 });
 
-renderStoreContact();renderFeedbacks();renderCustomerOrders();displayProducts();updateCart();
+renderStoreContact();renderFeedbacks();renderCustomerOrders();renderAlbums();displayProducts();updateCart();

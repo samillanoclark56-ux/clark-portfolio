@@ -16,6 +16,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  runTransaction,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -48,6 +49,8 @@ let orders = [];
 let activeOrderStatus = "All";
 let unsubscribeProducts = null;
 let unsubscribeOrders = null;
+let unsubscribeCustomers = null;
+let customers = {};
 let ownerReady = false;
 
 const $ = id => document.getElementById(id);
@@ -69,6 +72,7 @@ async function verifyOwner(user){
 function startRealtimeData(){
   if(unsubscribeProducts) unsubscribeProducts();
   if(unsubscribeOrders) unsubscribeOrders();
+  if(unsubscribeCustomers) unsubscribeCustomers();
 
   unsubscribeProducts = onSnapshot(collection(db,"products"), snapshot => {
     products = snapshot.docs.map(d => ({id:d.id, ...d.data()}));
@@ -81,6 +85,12 @@ function startRealtimeData(){
     orders.sort((a,b) => getOrderTime(b) - getOrderTime(a));
     renderAll();
   }, error => console.error("Orders listener error:", error));
+
+  unsubscribeCustomers = onSnapshot(collection(db,"customers"), snapshot => {
+    customers = {};
+    snapshot.docs.forEach(d => { customers[d.id] = d.data(); });
+    renderAll();
+  }, error => console.error("Customers listener error:", error));
 }
 
 function getOrderTime(o){
@@ -130,9 +140,11 @@ function renderBestSellers(target){
  const arr=products.map(p=>({...p,sold:map[p.id]||0})).sort((a,b)=>b.sold-a.sold).slice(0,5);
  target.innerHTML=arr.length?arr.map(p=>`<div class="list-row"><img src="${p.image||fallbackImage}"><div class="grow"><strong>${p.name}</strong><small>${p.category}</small></div><b>${p.sold} sold</b></div>`).join(""):`<div class="empty-state">No sales yet.</div>`;
 }
+function getCustomerPhoto(o){return o.customer?.photoURL||customers[o.customer?.uid]?.photoURL||""}
+function customerAvatar(o){const photo=getCustomerPhoto(o);return photo?`<img class="customer-avatar" src="${photo}" alt="Customer photo">`:`<span class="customer-avatar placeholder">👤</span>`}
 function renderRecentOrders(){
  const arr=[...orders].sort((a,b)=>getOrderTime(b)-getOrderTime(a)).slice(0,5);
- $("recentOrders").innerHTML=arr.length?arr.map(o=>`<div class="mini-order"><div><strong>${o.id}</strong><small>${o.customer?.name||"Customer"}</small></div><b>${money(o.total)}</b><span class="status ${o.status}">${o.status}</span></div>`).join(""):`<div class="empty-state">No orders yet.</div>`;
+ $("recentOrders").innerHTML=arr.length?arr.map(o=>`<div class="mini-order">${customerAvatar(o)}<div><strong>${o.id}</strong><small>${o.customer?.name||"Customer"}</small></div><b>${money(o.total)}</b><span class="status ${o.status}">${o.status}</span></div>`).join(""):`<div class="empty-state">No orders yet.</div>`;
 }
 function renderInventoryAlert(){
  const arr=products.filter(p=>Number(p.stock)<=3).sort((a,b)=>Number(a.stock)-Number(b.stock)).slice(0,5);
@@ -230,11 +242,75 @@ window.deleteProduct=async id=>{const p=products.find(x=>String(x.id)===String(i
 
 function renderOrders(){
  const arr=orders.filter(o=>activeOrderStatus==="All"||o.status===activeOrderStatus).sort((a,b)=>getOrderTime(b)-getOrderTime(a));
- $("ordersTable").innerHTML=arr.map(o=>`<tr><td><strong>${o.id}</strong></td><td class="table-customer"><strong>${o.customer?.name||"Customer"}</strong><small>${o.customer?.phone||""}</small></td><td>${(o.items||[]).reduce((s,i)=>s+Number(i.quantity||0),0)} item(s)</td><td><strong>${money(o.total)}</strong></td><td><span class="status ${o.status}">${o.status}</span></td><td>${getOrderTime(o)?new Date(getOrderTime(o)).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}):"—"}</td><td><button class="view-btn" onclick='openOrder(${JSON.stringify(o.id)})'>View</button></td></tr>`).join("");
+ $("ordersTable").innerHTML=arr.map(o=>`<tr><td><strong>${o.id}</strong></td><td class="table-customer">${customerAvatar(o)}<div><strong>${o.customer?.name||"Customer"}</strong><small>${o.customer?.phone||""}</small></div></td><td>${(o.items||[]).reduce((s,i)=>s+Number(i.quantity||0),0)} item(s)</td><td><strong>${money(o.total)}</strong></td><td><span class="status ${o.status}">${o.status}</span></td><td>${getOrderTime(o)?new Date(getOrderTime(o)).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}):"—"}</td><td><button class="view-btn" onclick='openOrder(${JSON.stringify(o.id)})'>View</button></td></tr>`).join("");
  $("ordersEmpty").style.display=arr.length?"none":"block";
 }
 document.querySelectorAll(".order-tabs button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".order-tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");activeOrderStatus=b.dataset.status;renderOrders()}));
-window.openOrder=id=>{const o=orders.find(x=>String(x.id)===String(id));if(!o)return;$("orderModalTitle").textContent=o.id;$("orderDetailContent").innerHTML=`<div class="detail-row"><span>Customer</span><strong>${o.customer?.name||""}</strong></div><div class="detail-row"><span>Phone</span><strong>${o.customer?.phone||""}</strong></div><div class="detail-row"><span>Address</span><strong>${o.customer?.address||""}</strong></div><div class="detail-row"><span>Payment</span><strong>${o.customer?.payment||"COD"}</strong></div><div class="detail-row"><span>Status</span><select id="orderStatusChange"><option>Pending</option><option>Confirmed</option><option>Preparing</option><option>Shipped</option><option>Completed</option></select></div><div class="detail-items">${(o.items||[]).map(i=>`<div class="detail-item"><img src="${i.image||fallbackImage}"><div><strong>${i.name}</strong><small>Size ${i.size||"—"} · Qty ${i.quantity}</small></div><b>${money(Number(i.price||0)*Number(i.quantity||0))}</b></div>`).join("")}</div><div class="detail-row"><span>Total</span><strong>${money(o.total)}</strong></div>`;$("orderStatusChange").value=o.status||"Pending";$("orderStatusChange").addEventListener("change",async e=>{try{await updateDoc(doc(db,"orders",o.id),{status:e.target.value,updatedAt:serverTimestamp()});$("orderModal").classList.remove("show")}catch(error){console.error(error);alert("Couldn't update order.")}});$("orderModal").classList.add("show")};
+window.openOrder=id=>{
+ const o=orders.find(x=>String(x.id)===String(id));
+ if(!o)return;
+ $("orderModalTitle").textContent=o.id;
+ const cancelled=o.status==="Cancelled";
+ const completed=o.status==="Completed";
+ $("orderDetailContent").innerHTML=`<div class="detail-customer">${customerAvatar(o)}<div><span>Customer</span><strong>${o.customer?.name||""}</strong></div></div><div class="detail-row"><span>Phone</span><strong>${o.customer?.phone||""}</strong></div><div class="detail-row"><span>Address</span><strong>${o.customer?.address||""}</strong></div><div class="detail-row"><span>Payment</span><strong>${o.customer?.payment||"COD"}</strong></div><div class="detail-row"><span>Status</span><select id="orderStatusChange" ${cancelled?"disabled":""}><option>Pending</option><option>Confirmed</option><option>Preparing</option><option>Shipped</option><option>Completed</option><option>Cancelled</option></select></div>${cancelled?`<div class="cancelled-reason"><span>Cancellation reason</span><strong>${o.cancellationReason||"—"}</strong></div>`:""}<div class="detail-items">${(o.items||[]).map(i=>`<div class="detail-item"><img src="${i.image||fallbackImage}"><div><strong>${i.name}</strong><small>Size ${i.size||"—"} · Qty ${i.quantity}</small></div><b>${money(Number(i.price||0)*Number(i.quantity||0))}</b></div>`).join("")}</div><div class="detail-row"><span>Total</span><strong>${money(o.total)}</strong></div>${(!cancelled&&!completed)?`<div class="order-detail-actions"><button type="button" class="danger-btn" id="cancelOrderBtn">Cancel Order</button></div>`:""}`;
+ $("orderStatusChange").value=o.status||"Pending";
+ $("orderStatusChange").addEventListener("change",async e=>{
+   try{await updateDoc(doc(db,"orders",o.id),{status:e.target.value,updatedAt:serverTimestamp()});$("orderModal").classList.remove("show")}
+   catch(error){console.error(error);alert("Couldn't update order.")}
+ });
+ $("cancelPanel").hidden=true;
+ $("cancelReason").value="";
+ $("cancelOtherReason").value="";
+ $("cancelOtherWrap").hidden=true;
+ const cancelBtn=$("cancelOrderBtn");
+ if(cancelBtn) cancelBtn.addEventListener("click",()=>{$("cancelPanel").hidden=false;});
+ $("orderModal").classList.add("show");
+};
+$("cancelReason").addEventListener("change",e=>{
+  $("cancelOtherWrap").hidden=e.target.value!=="Other";
+  if(e.target.value!=="Other") $("cancelOtherReason").value="";
+});
+$("cancelReasonBack").addEventListener("click",()=>{$("cancelPanel").hidden=true;});
+$("confirmCancelOrder").addEventListener("click",async()=>{
+  const id=$("orderModalTitle").textContent;
+  const reason=$("cancelReason").value;
+  const other=$("cancelOtherReason").value.trim();
+  if(!reason){alert("Please select a cancellation reason.");return;}
+  if(reason==="Other"&&!other){alert("Please type the cancellation reason.");return;}
+  const finalReason=reason==="Other"?other:reason;
+  if(!confirm(`Cancel order ${id}?\n\nReason: ${finalReason}`))return;
+  try{
+    await runTransaction(db,async transaction=>{
+      const orderRef=doc(db,"orders",id);
+      const orderSnap=await transaction.get(orderRef);
+      if(!orderSnap.exists()) throw new Error("Order no longer exists.");
+      const latest=orderSnap.data();
+      if(latest.status==="Cancelled") throw new Error("This order is already cancelled.");
+
+      const uniqueItems=new Map();
+      (latest.items||[]).forEach(item=>{
+        const productId=String(item.id||"");
+        const qty=Number(item.quantity||0);
+        if(productId&&qty>0) uniqueItems.set(productId,(uniqueItems.get(productId)||0)+qty);
+      });
+
+      const productSnaps=[];
+      for(const [productId,qty] of uniqueItems){
+        const ref=doc(db,"products",productId);
+        const snap=await transaction.get(ref);
+        if(snap.exists()) productSnaps.push([ref,snap,qty]);
+      }
+
+      for(const [ref,snap,qty] of productSnaps){
+        const currentStock=Math.max(0,Number(snap.data().stock||0));
+        transaction.update(ref,{stock:currentStock+qty,visible:true,updatedAt:serverTimestamp()});
+      }
+
+      transaction.update(orderRef,{status:"Cancelled",cancellationReason:finalReason,cancelledAt:serverTimestamp(),updatedAt:serverTimestamp()});
+    });
+    $("orderModal").classList.remove("show");
+  }catch(error){console.error(error);alert(`Couldn't cancel order. ${error.message||"Please try again."}`);}
+});
 $("closeOrderModal").addEventListener("click",()=>$("orderModal").classList.remove("show"));
 
 function renderInventory(){
@@ -243,6 +319,37 @@ function renderInventory(){
  $("inventoryGrid").innerHTML=products.map(p=>`<div class="inventory-item"><img src="${p.image||fallbackImage}"><div class="grow"><strong>${p.name}</strong><small class="${p.stock<=3?"low":"good"}">${p.stock===0?"Sold out":p.stock<=3?"Low stock":"In stock"}</small></div><div class="stock-control"><button onclick='changeStock(${JSON.stringify(p.id)},-1)'>−</button><span>${Number(p.stock||0)}</span><button onclick='changeStock(${JSON.stringify(p.id)},1)'>+</button></div></div>`).join("");
 }
 window.changeStock=async(id,delta)=>{const p=products.find(x=>String(x.id)===String(id));if(!p)return;const next=Math.max(0,Number(p.stock||0)+delta);try{await updateDoc(doc(db,"products",id),{stock:next,updatedAt:serverTimestamp()})}catch(error){console.error(error);alert("Couldn't update stock.")}};
+
+async function resetAnalytics(){
+  if(!ownerReady)return;
+  if(!orders.length){alert("There are no orders to delete.");return;}
+  const first=confirm("Reset Analytics?\n\nThis will permanently delete ALL orders and order history. Analytics, sales totals, best sellers, and customer order history will be cleared.\n\nDo you want to continue?");
+  if(!first)return;
+  const second=confirm("Final warning: this cannot be undone. Delete all orders now?");
+  if(!second)return;
+  try{
+    for(const order of orders){await deleteDoc(doc(db,"orders",order.id));}
+    alert("Analytics has been reset. All order history was deleted.");
+  }catch(error){console.error("Reset analytics error:",error);alert("Couldn't reset analytics. Please try again.");}
+}
+
+async function resetInventory(){
+  if(!ownerReady)return;
+  if(!products.length){alert("There are no products in the inventory.");return;}
+  const first=confirm("Reset Inventory?\n\nThis will set ALL product stock to 0 and hide all products from the Customer Store. Your product details will NOT be deleted.\n\nDo you want to continue?");
+  if(!first)return;
+  const second=confirm("Final warning: all current stock quantities will become 0. Continue?");
+  if(!second)return;
+  try{
+    for(const product of products){
+      await updateDoc(doc(db,"products",product.id),{stock:0,visible:false,updatedAt:serverTimestamp()});
+    }
+    alert("Inventory has been reset. All stock is now 0 and products are hidden from customers.");
+  }catch(error){console.error("Reset inventory error:",error);alert("Couldn't reset inventory. Please try again.");}
+}
+
+$("resetAnalyticsBtn").addEventListener("click",resetAnalytics);
+$("resetInventoryBtn").addEventListener("click",resetInventory);
 
 function renderAnalytics(){
  const cur=monthStats(monthKey()),last=monthStats(lastMonthKey());
@@ -260,7 +367,7 @@ $("ownerLoginForm").addEventListener("submit",async e=>{e.preventDefault();clear
 $("ownerLogout").addEventListener("click",async()=>{await signOut(auth)});
 
 onAuthStateChanged(auth,async user=>{
- if(!user){ownerReady=false;$("authGate").classList.remove("hidden");if(unsubscribeProducts)unsubscribeProducts();if(unsubscribeOrders)unsubscribeOrders();return}
+ if(!user){ownerReady=false;customers={};$("authGate").classList.remove("hidden");if(unsubscribeProducts)unsubscribeProducts();if(unsubscribeOrders)unsubscribeOrders();if(unsubscribeCustomers)unsubscribeCustomers();return}
  try{
    const allowed=await verifyOwner(user);
    if(!allowed){await signOut(auth);showAuthError("This account is not authorized as the store owner yet. Create users/UID with role: owner in Firestore.");return}

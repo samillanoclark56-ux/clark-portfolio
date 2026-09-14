@@ -14,10 +14,10 @@
     <div class="nav-container">
         <a href="#" class="logo"><span>Khai's</span><small>COLLECTION</small></a>
         <nav class="nav-links">
-            <a href="#home">Home</a><a href="#shop">Shop</a><a href="#new">New Arrivals</a><a href="#orders">My Orders</a><a href="#about">About</a><a href="#contact">Contact</a>
+            <a href="#home">Home</a><a href="#shop">Shop</a><a href="#orders">My Orders</a><a href="#about">About</a><a href="#contact">Contact</a>
         </nav>
         <div class="nav-actions">
-            <button class="account-btn" id="accountBtn"><span class="brown-emoji">👤</span> <span id="accountLabel">Account</span></button>
+            <button class="account-btn" id="accountBtn"><span class="header-avatar" id="headerAvatar"><span class="brown-emoji">👤</span></span><span id="accountLabel">Account</span></button>
             <button class="cart-btn" id="cartBtn"><span class="brown-emoji cart-emoji">🛒</span><span id="cartCount">0</span></button>
         </div>
         <button class="menu-btn" id="menuBtn">☰</button>
@@ -30,7 +30,7 @@
         <p class="eyebrow">EFFORTLESS • FEMININE • TIMELESS</p>
         <h1>Dress the way<br><em>you feel.</em></h1>
         <p class="hero-text">Discover beautiful pieces made to fit your everyday style.</p>
-        <a href="#shop" class="primary-btn">Shop Collection <span>→</span></a>
+        <a href="#shop" class="primary-btn">Shop Now <span>→</span></a>
     </div>
     <div class="hero-decoration">
         <div class="circle circle-one"></div><div class="circle circle-two"></div>
@@ -38,30 +38,20 @@
     </div>
 </section>
 
-<section class="categories">
-    <div class="section-heading"><p class="eyebrow">SHOP BY STYLE</p><h2>Find your favorite</h2></div>
-    <div class="category-list">
-        <button class="category active" data-category="All">All</button>
-        <button class="category" data-category="Tops">Tops</button>
-        <button class="category" data-category="Dresses">Dresses</button>
-        <button class="category" data-category="Bottoms">Bottoms</button>
-        <button class="category" data-category="Sets">Sets</button>
-        <button class="category" data-category="New">New Arrivals</button>
+<section class="collection-section" id="shop">
+    <div class="collection-heading">
+        <div><p class="eyebrow">SHOP NOW</p><h2>Browse the collection</h2><p class="section-muted collection-subtitle">Find your next favorite piece by collection.</p></div>
+        <button class="view-all-btn" id="viewAllBtn" type="button">View All <span>→</span></button>
     </div>
+    <div class="collection-albums" id="collectionAlbums"></div>
 </section>
 
-<section class="shop" id="shop">
-    <div class="shop-header"><div><p class="eyebrow">OUR COLLECTION</p><h2>Best picks for you</h2></div><span id="productTotal">0 items</span></div>
+<section class="shop shop-all hidden-catalog" id="allProducts">
+    <div class="shop-header"><div><p class="eyebrow">ALL ITEMS</p><h2>Shop All</h2></div><span id="productTotal">0 items</span></div>
     <div class="products" id="products"></div>
-    <div class="empty-products" id="emptyProducts"><div>♡</div><h3>No products found</h3><p>Try another search or category.</p></div>
+    <div class="empty-products" id="emptyProducts"><div>♡</div><h3>No products found</h3><p>There are no items in this collection yet.</p></div>
 </section>
 
-<section class="promo">
-    <div class="promo-content">
-        <p class="eyebrow">KHAI'S COLLECTION</p><h2>Simple pieces.<br>Beautiful you.</h2>
-        <p>Curated clothes for your everyday moments.</p><a href="#shop" class="outline-btn">Explore Now →</a>
-    </div>
-</section>
 
 <section class="orders-section" id="orders">
     <div class="section-heading">
@@ -75,15 +65,6 @@
         <p>Login to your account to see your order status.</p>
         <button class="outline-btn dark-outline" id="ordersLoginBtn">Login to Track Orders →</button>
     </div>
-</section>
-
-<section class="feedback-section">
-    <div class="section-heading">
-        <p class="eyebrow">CUSTOMER FEEDBACK</p>
-        <h2>What they say</h2>
-        <p class="section-muted">A few words from our happy customers.</p>
-    </div>
-    <div id="feedbacks" class="feedback-grid"></div>
 </section>
 
 <section class="contact-section" id="contact">
@@ -192,6 +173,15 @@
             <p class="eyebrow">COMPLETE YOUR DETAILS</p>
             <h2>Delivery Information</h2>
             <p class="account-subtitle">Please fill these in before shopping. We only ask once.</p>
+            <div class="profile-upload">
+                <div class="profile-upload-preview" id="profileUploadPreview"><span class="brown-emoji">👤</span></div>
+                <div class="profile-upload-copy">
+                    <strong>Profile Photo</strong>
+                    <span>Add a photo to personalize your account.</span>
+                    <label class="profile-photo-btn" for="profilePhotoInput">Choose Photo</label>
+                    <input id="profilePhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden>
+                </div>
+            </div>
             <label>Full Name</label>
             <input id="profileNameInput" type="text" required autocomplete="name" placeholder="Your full name">
             <label>Contact Number</label>

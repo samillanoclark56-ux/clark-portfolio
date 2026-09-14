@@ -82,18 +82,18 @@
 
     <section class="page" id="ordersPage">
       <div class="section-top"><div><p class="eyebrow">CUSTOMER ACTIVITY</p><h2>Orders</h2><p>Manage and update incoming orders.</p></div></div>
-      <div class="order-tabs"><button class="active" data-status="All">All</button><button data-status="Pending">Pending</button><button data-status="Confirmed">Confirmed</button><button data-status="Preparing">Preparing</button><button data-status="Shipped">Shipped</button><button data-status="Completed">Completed</button></div>
+      <div class="order-tabs"><button class="active" data-status="All">All</button><button data-status="Pending">Pending</button><button data-status="Confirmed">Confirmed</button><button data-status="Preparing">Preparing</button><button data-status="Shipped">Shipped</button><button data-status="Completed">Completed</button><button data-status="Cancelled">Cancelled</button></div>
       <div class="orders-table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th><th></th></tr></thead><tbody id="ordersTable"></tbody></table><div class="empty-state" id="ordersEmpty">No orders yet.</div></div>
     </section>
 
     <section class="page" id="inventoryPage">
-      <div class="section-top"><div><p class="eyebrow">STOCK CONTROL</p><h2>Inventory</h2><p>Keep your available stock accurate.</p></div></div>
+      <div class="section-top"><div><p class="eyebrow">STOCK CONTROL</p><h2>Inventory</h2><p>Keep your available stock accurate.</p></div><button class="danger-btn reset-page-btn" id="resetInventoryBtn" type="button">Reset Inventory</button></div>
       <div class="inventory-summary"><div><span>Total Units</span><strong id="totalUnits">0</strong></div><div><span>Low Stock</span><strong id="lowStockCount">0</strong></div><div><span>Sold Out</span><strong id="soldOutCount">0</strong></div></div>
       <div class="inventory-grid" id="inventoryGrid"></div>
     </section>
 
     <section class="page" id="analyticsPage">
-      <div class="section-top"><div><p class="eyebrow">BUSINESS INSIGHTS</p><h2>Analytics</h2><p>Compare this month with last month.</p></div></div>
+      <div class="section-top"><div><p class="eyebrow">BUSINESS INSIGHTS</p><h2>Analytics</h2><p>Compare this month with last month.</p></div><button class="danger-btn reset-page-btn" id="resetAnalyticsBtn" type="button">Reset Analytics</button></div>
       <div class="compare-grid">
         <article class="compare-card"><span>SALES</span><div><strong id="analyticsSales">₱0</strong><small id="analyticsSalesLast">Last month ₱0</small></div><div class="progress"><i id="salesProgress"></i></div></article>
         <article class="compare-card"><span>PROFIT</span><div><strong id="analyticsProfit">₱0</strong><small id="analyticsProfitLast">Last month ₱0</small></div><div class="progress"><i id="profitProgress"></i></div></article>
@@ -140,7 +140,28 @@
 </div>
 
 <div class="modal-backdrop" id="orderModal">
-  <div class="modal order-detail"><button class="modal-close" id="closeOrderModal">✕</button><p class="eyebrow">ORDER DETAILS</p><h2 id="orderModalTitle">Order</h2><div id="orderDetailContent"></div></div>
+  <div class="modal order-detail"><button class="modal-close" id="closeOrderModal">✕</button><p class="eyebrow">ORDER DETAILS</p><h2 id="orderModalTitle">Order</h2><div id="orderDetailContent"></div>
+    <div class="cancel-panel" id="cancelPanel" hidden>
+      <div class="cancel-panel-head"><strong>Cancel this order</strong><span>Choose a reason so the customer knows why.</span></div>
+      <label>Cancellation Reason</label>
+      <select id="cancelReason">
+        <option value="">Select a reason</option>
+        <option>Customer requested cancellation</option>
+        <option>Item is out of stock</option>
+        <option>Unable to fulfill the order</option>
+        <option>Incorrect order details</option>
+        <option>Duplicate order</option>
+        <option>Delivery issue</option>
+        <option>Payment issue</option>
+        <option>Other</option>
+      </select>
+      <div id="cancelOtherWrap" hidden>
+        <label>Other Reason</label>
+        <textarea id="cancelOtherReason" rows="3" placeholder="Type the cancellation reason..."></textarea>
+      </div>
+      <div class="cancel-actions"><button type="button" class="secondary-btn" id="cancelReasonBack">Back</button><button type="button" class="danger-btn" id="confirmCancelOrder">Cancel Order</button></div>
+    </div>
+  </div>
 </div>
 
 <script type="module" src="script.js"></script>
