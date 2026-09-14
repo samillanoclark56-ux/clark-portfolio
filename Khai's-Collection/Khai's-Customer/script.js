@@ -18,6 +18,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  runTransaction,
   serverTimestamp,
   onSnapshot,
   query,
@@ -124,6 +125,36 @@ function subscribeCustomerOrders(){
   });
 }
 
+
+/* ===== PRODUCT IMAGE LIGHTBOX ===== */
+(function setupProductImageLightbox(){
+  const style=document.createElement("style");
+  style.textContent=`
+    .image-lightbox{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.92);-webkit-tap-highlight-color:transparent}
+    .image-lightbox.show{display:flex}
+    .image-lightbox img{display:block;max-width:96vw;max-height:92vh;width:auto;height:auto;object-fit:contain;border-radius:10px;box-shadow:0 20px 70px rgba(0,0,0,.5);user-select:none;-webkit-user-drag:none}
+    .image-lightbox-close{position:absolute;top:max(14px,env(safe-area-inset-top));right:max(14px,env(safe-area-inset-right));width:46px;height:46px;border:0;border-radius:50%;background:rgba(255,255,255,.95);color:#111;font-size:28px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;touch-action:manipulation}
+    #modalImage{cursor:zoom-in}
+    @media(max-width:600px){.image-lightbox{padding:10px}.image-lightbox img{max-width:98vw;max-height:88vh;border-radius:6px}.image-lightbox-close{width:44px;height:44px;font-size:26px}}
+  `;
+  document.head.appendChild(style);
+  const box=document.createElement("div");
+  box.className="image-lightbox";
+  box.setAttribute("role","dialog");
+  box.setAttribute("aria-label","Product image");
+  box.innerHTML='<button type="button" class="image-lightbox-close" aria-label="Close image">×</button><img alt="Product image">';
+  document.body.appendChild(box);
+  const img=box.querySelector("img");
+  const close=()=>{box.classList.remove("show");document.body.style.overflow="";};
+  const open=(src,alt)=>{if(!src)return;img.src=src;img.alt=alt||"Product image";box.classList.add("show");document.body.style.overflow="hidden";};
+  box.querySelector(".image-lightbox-close").addEventListener("click",close);
+  box.addEventListener("click",e=>{if(e.target===box)close();});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")close();});
+  document.addEventListener("click",e=>{
+    if(e.target?.id==="modalImage"){e.preventDefault();e.stopPropagation();open(e.target.src,e.target.alt);}
+  },true);
+})();
+
 function displayProducts(list=products){
   productsContainer.innerHTML="";
   if(!list.length){emptyProducts.style.display="block";productTotal.textContent="0 items";return}
@@ -200,7 +231,79 @@ document.getElementById("cartBtn").addEventListener("click",openCart);document.g
 document.getElementById("checkoutBtn").addEventListener("click",()=>{if(!cart.length){alert("Your cart is empty.");return}if(!currentUser){closeCart();openAccount("login");alert("Please login or create an account before checkout.");return}if(!hasCompleteProfile()){closeCart();openProfileForm();alert("Please complete your name, address, and contact number first.");return}document.getElementById("checkoutTotal").textContent=formatPrice(cart.reduce((s,i)=>s+i.price*i.quantity,0));closeCart();document.getElementById("customerName").value=currentProfile.name;document.getElementById("customerPhone").value=currentProfile.phone;document.getElementById("customerAddress").value=currentProfile.address;checkoutOverlay.classList.add("show")});
 document.getElementById("closeCheckout").addEventListener("click",()=>checkoutOverlay.classList.remove("show"));
 
-document.getElementById("checkoutForm").addEventListener("submit",async e=>{e.preventDefault();if(!currentUser){showError("Please login first.");return}const order={id:"KH"+Date.now().toString().slice(-6),customer:{uid:currentUser.uid,name:customerName.value,phone:customerPhone.value,address:customerAddress.value,payment:paymentMethod.value},items:cart.map(i=>({id:i.id,name:i.name,price:Number(i.price||0),cost:Number(i.cost||0),image:i.image,size:i.size,quantity:Number(i.quantity||0)})),total:cart.reduce((s,i)=>s+i.price*i.quantity,0),createdAt:serverTimestamp(),date:new Date().toISOString(),status:"Pending"};try{await setDoc(doc(db,"orders",order.id),order);cart=[];saveCart();updateCart();checkoutOverlay.classList.remove("show");successOverlay.classList.add("show");e.target.reset()}catch(error){console.error(error);showError("We couldn't place your order. Please try again.")}});
+document.getElementById("checkoutForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if(!currentUser){showError("Please login first.");return}
+  if(!cart.length){showError("Your cart is empty.");return}
+
+  const orderId="KH"+Date.now().toString().slice(-6)+Math.random().toString(36).slice(2,6).toUpperCase();
+  const items=cart.map(i=>({
+    id:i.id,name:i.name,price:Number(i.price||0),cost:Number(i.cost||0),
+    image:i.image,size:i.size,quantity:Number(i.quantity||0)
+  }));
+  const total=items.reduce((s,i)=>s+i.price*i.quantity,0);
+  const order={
+    id:orderId,
+    customer:{
+      uid:currentUser.uid,
+      name:customerName.value.trim(),
+      phone:customerPhone.value.trim(),
+      address:customerAddress.value.trim(),
+      payment:paymentMethod.value
+    },
+    items,total,createdAt:serverTimestamp(),date:new Date().toISOString(),status:"Pending"
+  };
+
+  try{
+    await runTransaction(db,async transaction=>{
+      const productRefs=[...new Map(items.map(i=>[i.id,i])).values()].map(i=>doc(db,"products",i.id));
+      const snapshots=[];
+      for(const ref of productRefs) snapshots.push(await transaction.get(ref));
+
+      const byId=new Map(snapshots.map(s=>[s.id,s]));
+      for(const item of items){
+        const snap=byId.get(item.id);
+        if(!snap||!snap.exists()) throw new Error(`PRODUCT_UNAVAILABLE:${item.name}`);
+        const p=snap.data();
+        const stock=Math.max(0,Number(p.stock||0));
+        if(p.visible===false||stock<=0) throw new Error(`SOLD_OUT:${item.name}`);
+        if(item.quantity>stock) throw new Error(`INSUFFICIENT:${item.name}:${stock}`);
+      }
+
+      transaction.set(doc(db,"orders",orderId),order);
+
+      for(const item of items){
+        const snap=byId.get(item.id);
+        const p=snap.data();
+        const nextStock=Math.max(0,Number(p.stock||0)-item.quantity);
+        transaction.update(doc(db,"products",item.id),{
+          stock:nextStock,
+          visible:nextStock>0,
+          updatedAt:serverTimestamp()
+        });
+      }
+    });
+
+    cart=[];saveCart();updateCart();
+    checkoutOverlay.classList.remove("show");
+    successOverlay.classList.add("show");
+    e.target.reset();
+  }catch(error){
+    console.error("Checkout transaction failed:",error);
+    const msg=String(error.message||"");
+    if(msg.startsWith("SOLD_OUT:")) showError(`${msg.replace("SOLD_OUT:","")} is already sold out.`);
+    else if(msg.startsWith("INSUFFICIENT:")){
+      const parts=msg.split(":");
+      showError(`${parts[1]} only has ${parts[2]} left. Please update your cart.`);
+    }else if(msg.startsWith("PRODUCT_UNAVAILABLE:")){
+      showError(`${msg.replace("PRODUCT_UNAVAILABLE:","")} is no longer available.`);
+    }else if(error.code==="permission-denied"){
+      showError("Checkout permission is not configured yet. Please update the Firestore rules included with this ZIP.");
+    }else{
+      showError("We couldn't place your order. Please try again.");
+    }
+  }
+});
 
 document.getElementById("successClose").addEventListener("click",()=>{successOverlay.classList.remove("show");location.hash="shop"});
 
@@ -257,7 +360,7 @@ onAuthStateChanged(auth,async user=>{
 });
 
 onSnapshot(query(collection(db,"products"),where("visible","==",true)),(snapshot)=>{
-  products=snapshot.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.visible!==false);
+  products=snapshot.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.visible!==false && getStock(p)>0);
   products.sort((a,b)=>{
     const ta=a.createdAt?.toMillis?.()||0, tb=b.createdAt?.toMillis?.()||0;
     return tb-ta;
