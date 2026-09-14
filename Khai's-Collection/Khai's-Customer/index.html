@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Khai's Collection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="header">
+    <div class="nav-container">
+        <a href="#" class="logo"><span>Khai's</span><small>COLLECTION</small></a>
+        <nav class="nav-links">
+            <a href="#home">Home</a><a href="#shop">Shop</a><a href="#new">New Arrivals</a><a href="#orders">My Orders</a><a href="#about">About</a><a href="#contact">Contact</a>
+        </nav>
+        <div class="nav-actions">
+            <button class="account-btn" id="accountBtn"><span class="brown-emoji">👤</span> <span id="accountLabel">Account</span></button>
+            <button class="cart-btn" id="cartBtn"><span class="brown-emoji cart-emoji">🛒</span><span id="cartCount">0</span></button>
+        </div>
+        <button class="menu-btn" id="menuBtn">☰</button>
+    </div>
+</header>
+
+
+<section class="hero" id="home">
+    <div class="hero-content">
+        <p class="eyebrow">EFFORTLESS • FEMININE • TIMELESS</p>
+        <h1>Dress the way<br><em>you feel.</em></h1>
+        <p class="hero-text">Discover beautiful pieces made to fit your everyday style.</p>
+        <a href="#shop" class="primary-btn">Shop Collection <span>→</span></a>
+    </div>
+    <div class="hero-decoration">
+        <div class="circle circle-one"></div><div class="circle circle-two"></div>
+        <div class="hero-card"><span>NEW</span><strong>COLLECTION</strong><small>2026</small></div>
+    </div>
+</section>
+
+<section class="categories">
+    <div class="section-heading"><p class="eyebrow">SHOP BY STYLE</p><h2>Find your favorite</h2></div>
+    <div class="category-list">
+        <button class="category active" data-category="All">All</button>
+        <button class="category" data-category="Tops">Tops</button>
+        <button class="category" data-category="Dresses">Dresses</button>
+        <button class="category" data-category="Bottoms">Bottoms</button>
+        <button class="category" data-category="Sets">Sets</button>
+        <button class="category" data-category="New">New Arrivals</button>
+    </div>
+</section>
+
+<section class="shop" id="shop">
+    <div class="shop-header"><div><p class="eyebrow">OUR COLLECTION</p><h2>Best picks for you</h2></div><span id="productTotal">0 items</span></div>
+    <div class="products" id="products"></div>
+    <div class="empty-products" id="emptyProducts"><div>♡</div><h3>No products found</h3><p>Try another search or category.</p></div>
+</section>
+
+<section class="promo">
+    <div class="promo-content">
+        <p class="eyebrow">KHAI'S COLLECTION</p><h2>Simple pieces.<br>Beautiful you.</h2>
+        <p>Curated clothes for your everyday moments.</p><a href="#shop" class="outline-btn">Explore Now →</a>
+    </div>
+</section>
+
+<section class="orders-section" id="orders">
+    <div class="section-heading">
+        <p class="eyebrow">ORDER TRACKING</p>
+        <h2>My Orders</h2>
+        <p class="section-muted">Track your latest orders just like a simple shopping app.</p>
+    </div>
+    <div id="customerOrders" class="customer-orders"></div>
+    <div id="ordersLoginHint" class="orders-login-hint">
+        <strong>Want to track your order?</strong>
+        <p>Login to your account to see your order status.</p>
+        <button class="outline-btn dark-outline" id="ordersLoginBtn">Login to Track Orders →</button>
+    </div>
+</section>
+
+<section class="feedback-section">
+    <div class="section-heading">
+        <p class="eyebrow">CUSTOMER FEEDBACK</p>
+        <h2>What they say</h2>
+        <p class="section-muted">A few words from our happy customers.</p>
+    </div>
+    <div id="feedbacks" class="feedback-grid"></div>
+</section>
+
+<section class="contact-section" id="contact">
+    <div class="contact-card">
+        <div class="contact-copy">
+            <p class="eyebrow">CONTACT ME HERE</p>
+            <h2>Need help with your order?</h2>
+            <p>Message Khai's Collection for orders, size questions, availability, or anything you need.</p>
+        </div>
+        <div id="contactLinks" class="contact-links"></div>
+    </div>
+</section>
+
+<section class="about" id="about">
+    <div class="about-card"><p class="eyebrow">ABOUT US</p><h2>Made for your style.</h2><p>Welcome to Khai's Collection — your little online closet for cute, comfortable and stylish pieces.</p></div>
+</section>
+
+<footer>
+    <div class="footer-logo"><span>Khai's</span><small>COLLECTION</small></div>
+    <p>© 2026 Khai's Collection. All rights reserved.</p>
+    <div class="socials"><a href="https://www.facebook.com/fritzyyy123" target="_blank" rel="noopener">Facebook</a><a href="https://www.facebook.com/fritzyyy123" target="_blank" rel="noopener">Messenger</a></div>
+</footer>
+
+<div class="modal-overlay" id="productModal">
+    <div class="product-modal">
+        <button class="modal-close" id="modalClose">✕</button>
+        <div class="modal-image"><img id="modalImage" src="" alt=""></div>
+        <div class="modal-info">
+            <p class="modal-category" id="modalCategory"></p><h2 id="modalName"></h2>
+            <div class="modal-price" id="modalPrice"></div><p class="modal-description" id="modalDescription"></p>
+            <label>Available Size</label><div class="sizes" id="productSizes"></div><div class="stock-status" id="stockStatus">Available: 0</div>
+            <label>Quantity</label><div class="quantity"><button id="minusBtn">−</button><span id="quantity">1</span><button id="plusBtn">+</button></div>
+            <button class="add-modal-btn" id="addModalBtn">Add to Cart</button>
+        </div>
+    </div>
+</div>
+
+<div class="cart-overlay" id="cartOverlay"></div>
+<aside class="cart">
+    <div class="cart-header"><div><p class="eyebrow">YOUR BAG</p><h2>Shopping Cart</h2></div><button id="closeCart">✕</button></div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-footer"><div class="subtotal"><span>Subtotal</span><strong id="subtotal">₱0</strong></div><button class="checkout-btn" id="checkoutBtn">Proceed to Checkout →</button></div>
+</aside>
+
+<div class="account-overlay" id="accountOverlay">
+    <div class="account-modal">
+        <button class="modal-close" id="closeAccount">✕</button>
+
+        <div id="accountLoggedOut">
+            <p class="eyebrow" id="accountEyebrow">WELCOME TO KHAI'S</p>
+            <h2 id="accountTitle">Login to your account</h2>
+            <p class="account-subtitle" id="accountSubtitle">Save your details and make checkout faster.</p>
+
+            <div class="account-tabs">
+                <button class="account-tab active" id="loginTab">Login</button>
+                <button class="account-tab" id="signupTab">Create Account</button>
+            </div>
+
+            <form id="loginForm" class="account-form">
+                <label>Email Address</label>
+                <input id="loginEmail" type="email" required autocomplete="email" placeholder="you@example.com">
+                <label>Password</label>
+                <div class="password-wrap"><input id="loginPassword" type="password" required autocomplete="current-password" placeholder="Your password"><button type="button" class="show-password" data-target="loginPassword">Show</button></div>
+                <label class="check-row"><input id="rememberLogin" type="checkbox" checked> <span>Remember this account</span></label>
+                <button type="submit" class="account-submit">Login</button>
+                <button type="button" class="google-btn" id="googleLoginBtn"><span>G</span> Continue with Google</button>
+                <p class="account-switch">No account yet? <button type="button" id="goSignup">Create one</button></p>
+            </form>
+
+            <form id="signupForm" class="account-form hidden">
+                <label>Full Name</label>
+                <input id="signupName" type="text" required autocomplete="name" placeholder="Your full name">
+                <label>Contact Number</label>
+                <input id="signupPhone" type="tel" required autocomplete="tel" placeholder="09XXXXXXXXX">
+                <label>Delivery Address</label>
+                <textarea id="signupAddress" required autocomplete="street-address" placeholder="Complete delivery address"></textarea>
+                <label>Email Address</label>
+                <input id="signupEmail" type="email" required autocomplete="email" placeholder="you@example.com">
+                <label>Password</label>
+                <div class="password-wrap"><input id="signupPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters"><button type="button" class="show-password" data-target="signupPassword">Show</button></div>
+                <label>Confirm Password</label>
+                <div class="password-wrap"><input id="signupConfirmPassword" type="password" required minlength="6" autocomplete="new-password" placeholder="Re-enter your password"><button type="button" class="show-password" data-target="signupConfirmPassword">Show</button></div>
+                <label class="check-row"><input id="rememberSignup" type="checkbox" checked> <span>Remember this account</span></label>
+                <button type="submit" class="account-submit">Create Account</button>
+                <button type="button" class="google-btn" id="googleSignupBtn"><span>G</span> Sign up with Google</button>
+                <p class="account-switch">Already have an account? <button type="button" id="goLogin">Login</button></p>
+            </form>
+        </div>
+
+        <div id="accountLoggedIn" class="hidden">
+            <p class="eyebrow">MY ACCOUNT</p>
+            <h2 id="accountWelcome">Welcome!</h2>
+            <div class="profile-card">
+                <div class="profile-avatar" id="profileAvatar"><span class="brown-emoji">👤</span></div>
+                <div><strong id="profileName">Customer</strong><span id="profileEmail">email</span></div>
+            </div>
+            <div class="profile-details">
+                <div><small>Contact Number</small><strong id="profilePhone">—</strong></div>
+                <div><small>Delivery Address</small><strong id="profileAddress">—</strong></div>
+            </div>
+            <button type="button" class="account-submit" id="editProfileBtn">Edit Profile</button>
+            <button type="button" class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+
+        <form id="profileForm" class="account-form hidden">
+            <p class="eyebrow">COMPLETE YOUR DETAILS</p>
+            <h2>Delivery Information</h2>
+            <p class="account-subtitle">Please fill these in before shopping. We only ask once.</p>
+            <label>Full Name</label>
+            <input id="profileNameInput" type="text" required autocomplete="name" placeholder="Your full name">
+            <label>Contact Number</label>
+            <input id="profilePhoneInput" type="tel" required autocomplete="tel" placeholder="09XXXXXXXXX">
+            <label>Delivery Address</label>
+            <textarea id="profileAddressInput" required autocomplete="street-address" placeholder="Complete delivery address"></textarea>
+            <button type="submit" class="account-submit">Save Details</button>
+        </form>
+    </div>
+</div>
+
+<div class="checkout-overlay" id="checkoutOverlay">
+    <div class="checkout-modal">
+        <button class="modal-close" id="closeCheckout">✕</button>
+        <p class="eyebrow">ORDER DETAILS</p><h2>Checkout</h2>
+        <form id="checkoutForm">
+            <label>Full Name</label><input id="customerName" required placeholder="Your name">
+            <label>Phone Number</label><input id="customerPhone" type="tel" required placeholder="09XXXXXXXXX">
+            <label>Delivery Address</label><textarea id="customerAddress" required placeholder="Complete address"></textarea>
+            <label>Payment Method</label><select id="paymentMethod"><option value="COD">Cash on Delivery</option><option value="GCash">GCash</option></select>
+            <div class="checkout-total"><span>Total</span><strong id="checkoutTotal">₱0</strong></div>
+            <button type="submit" class="checkout-btn">Place Order</button>
+        </form>
+    </div>
+</div>
+
+<div class="success-overlay" id="successOverlay">
+    <div class="success-box"><div class="success-icon">✓</div><h2>Order Received!</h2><p>Thank you for shopping with Khai's Collection. We'll contact you soon to confirm your order.</p><button id="successClose" class="primary-btn">Continue Shopping</button></div>
+</div>
+
+<script type="module" src="script.js"></script>
+</body>
+</html>
