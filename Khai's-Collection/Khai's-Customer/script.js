@@ -63,7 +63,26 @@ let cart=JSON.parse(localStorage.getItem("khaiCart"))||[],currentProduct=null,cu
 const productsContainer=document.getElementById("products"),productTotal=document.getElementById("productTotal"),emptyProducts=document.getElementById("emptyProducts"),cartCount=document.getElementById("cartCount"),cartItems=document.getElementById("cartItems"),subtotal=document.getElementById("subtotal"),cartPanel=document.querySelector(".cart"),cartOverlay=document.getElementById("cartOverlay"),productModal=document.getElementById("productModal"),checkoutOverlay=document.getElementById("checkoutOverlay"),successOverlay=document.getElementById("successOverlay");
 const accountOverlay=document.getElementById("accountOverlay"),accountLoggedOut=document.getElementById("accountLoggedOut"),accountLoggedIn=document.getElementById("accountLoggedIn"),profileForm=document.getElementById("profileForm"),loginForm=document.getElementById("loginForm"),signupForm=document.getElementById("signupForm"),accountLabel=document.getElementById("accountLabel"),profilePhotoInput=document.getElementById("profilePhotoInput"),profileUploadPreview=document.getElementById("profileUploadPreview");
 const customerOrdersContainer=document.getElementById("customerOrders"),ordersLoginHint=document.getElementById("ordersLoginHint");
-const customerName=document.getElementById("customerName"),customerPhone=document.getElementById("customerPhone"),customerAddress=document.getElementById("customerAddress"),paymentMethod=document.getElementById("paymentMethod");
+const customerName=document.getElementById("customerName"),customerPhone=document.getElementById("customerPhone"),customerMunicipality=document.getElementById("customerMunicipality"),customerBarangay=document.getElementById("customerBarangay"),customerLandmark=document.getElementById("customerLandmark"),paymentMethod=document.getElementById("paymentMethod"),deliveryFeeEl=document.getElementById("deliveryFee"),deliveryFeeNote=document.getElementById("deliveryFeeNote"),checkoutTotalEl=document.getElementById("checkoutTotal");
+
+const DELIVERY_ZONES={
+  "Jagna":{
+    "Alejawan":0,"Balili":0,"Boctol":0,"Buyog":0,"Bunga Ilaya":0,"Bunga Mar":0,"Cabunga-an":0,"Calabacita":0,"Cambugason":0,"Can-ipol":0,"Canjulao":0,"Cantagay":0,"Cantuyoc":0,"Can-uba":0,"Can-upao":0,"Faraon":0,"Ipil":0,"Kinagbaan":0,"Laca":0,"Larapan":0,"Lonoy":0,"Looc":0,"Malbog":0,"Mayana":0,"Naatang":0,"Nausok":0,"Odiong":0,"Pagina":0,"Pangdan":0,"Poblacion":0,"Tejero":0,"Tubod Mar":0,"Tubod Monte":0
+  },
+  "Duero":{
+    "Alejawan":20,"Mambool":20,"Madua Sur":20,"San Isidro":20,
+    "Madua Norte":30,"Duay":30,"Payao":30,"San Pedro":30,"Itum":30,"Danao":30,
+    "Angilan":40,"Anibongan":40,"Cansuhay":40,"Langkis":40,"Lobogon":40,"Mawi":40,"Taytay":40,
+    "Bangwalog":50,"Guinsularan":50,"San Antonio":50
+  },
+  "Garcia Hernandez":{
+    "Candulao":20,"Catmon":20,"Poblacion East":20,"Poblacion West":20,"Sacaon":20,
+    "Cagwang":30,"Calma":30,"Canayaon East":30,"Canayaon West":30,"Lungsodaan East":30,"Lungsodaan West":30,"Libertad":30,"Sampong":30,"Tabuan":30,
+    "Abijilan":40,"Antipolo":40,"Basiao":40,"Cambuyo":40,"Candanas":40,"Datag":40,"Malinao":40,"Pasong":40,"Togbongon":40,"Ulbujan East":40,"Ulbujan West":40,"Victoria":40,
+    "Cayam":50,"Cupa":50,"Estaca":50,"Manaba":50
+  }
+};
+let activeOrderStatus="All";
 const formatPrice=p=>"₱"+Number(p).toLocaleString("en-PH");
 const showError=message=>alert(message);
 
@@ -99,19 +118,35 @@ function renderCustomerOrders(){
     return;
   }
   ordersLoginHint.classList.add("hidden");
-  if(!customerOrders.length){
-    customerOrdersContainer.innerHTML=`<div class="orders-empty"><div>♡</div><h3>No orders yet</h3><p>Your placed orders will appear here.</p><a href="#shop" class="outline-btn dark-outline">Start Shopping →</a></div>`;
+  const filtered=customerOrders.filter(o=>activeOrderStatus==="All"||o.status===activeOrderStatus);
+  if(!filtered.length){
+    customerOrdersContainer.innerHTML=`<div class="orders-empty"><div>♡</div><h3>${customerOrders.length?"No orders in this status":"No orders yet"}</h3><p>${customerOrders.length?"Try another order status.":"Your placed orders will appear here."}</p>${customerOrders.length?"":`<a href="#shop" class="outline-btn dark-outline">Start Shopping →</a>`}</div>`;
     return;
   }
-  customerOrdersContainer.innerHTML=customerOrders.map(o=>{
+  customerOrdersContainer.innerHTML=filtered.map(o=>{
     const step=statusStep(o.status);
     const total=formatPrice(o.total||0);
     const date=o.date?new Date(o.date).toLocaleDateString("en-PH",{month:"short",day:"numeric",year:"numeric"}):"";
     const items=(o.items||[]).map(i=>`<div class="order-product"><img src="${i.image||""}" alt="${i.name||"Product"}"><div><strong>${i.name||"Product"}</strong><small>Size ${i.size||"—"} · Qty ${i.quantity||0}</small></div><b>${formatPrice(Number(i.price||0)*Number(i.quantity||0))}</b></div>`).join("");
     const cancelled=o.status==="Cancelled";
-    return `<article class="customer-order ${cancelled?"order-cancelled":""}"><div class="order-top"><div><span class="order-id">${o.id}</span><small>${date}</small></div><strong>${total}</strong></div><div class="order-products">${items}</div>${cancelled?`<div class="customer-cancelled"><strong>Order Cancelled</strong><span>${o.cancellationReason||"This order was cancelled by the store."}</span></div>`:`<div class="order-tracker"><div class="tracker-line"><span class="tracker-progress step-${step}"></span></div><div class="tracker-step ${step>=1?"active":""}"><span>1</span><small>Preparing</small></div><div class="tracker-step ${step>=2?"active":""}"><span>2</span><small>Delivery on the way</small></div><div class="tracker-step ${step>=3?"active":""}"><span>3</span><small>Delivered</small></div></div>`}<div class="order-status-text ${cancelled?"cancelled-status":""}">Status: <strong>${statusLabel(o.status)}</strong></div></article>`;
+    const deliveryFee=Number(o.deliveryFee||0);
+    return `<article class="customer-order ${cancelled?"order-cancelled":""}"><div class="order-top"><div><span class="order-id">${o.id}</span><small>${date}</small></div><strong>${total}</strong></div><div class="order-products">${items}</div><div class="order-delivery-summary"><span>Delivery: ${o.customer?.barangay||"—"}, ${o.customer?.municipality||"—"}</span><b>${deliveryFee?formatPrice(deliveryFee):"FREE"}</b></div>${cancelled?`<div class="customer-cancelled"><strong>Order Cancelled</strong><span>${o.cancellationReason||"This order was cancelled by the store."}</span></div>`:`<div class="order-tracker"><div class="tracker-line"><span class="tracker-progress step-${step}"></span></div><div class="tracker-step ${step>=1?"active":""}"><span>1</span><small>Preparing</small></div><div class="tracker-step ${step>=2?"active":""}"><span>2</span><small>Delivery on the way</small></div><div class="tracker-step ${step>=3?"active":""}"><span>3</span><small>Delivered</small></div></div>`}<div class="order-status-text ${cancelled?"cancelled-status":""}">Status: <strong>${statusLabel(o.status)}</strong></div></article>`;
   }).join("");
 }
+
+function updateOrderTabs(){
+  document.querySelectorAll(".order-status-tab").forEach(btn=>btn.classList.toggle("active",btn.dataset.status===activeOrderStatus));
+}
+
+function openOrdersPage(){
+  document.getElementById("ordersPageOverlay")?.classList.add("show");
+  renderCustomerOrders();
+}
+function closeOrdersPage(){document.getElementById("ordersPageOverlay")?.classList.remove("show");}
+
+document.getElementById("ordersNavBtn")?.addEventListener("click",openOrdersPage);
+document.getElementById("closeOrdersPage")?.addEventListener("click",closeOrdersPage);
+document.querySelectorAll(".order-status-tab").forEach(btn=>btn.addEventListener("click",()=>{activeOrderStatus=btn.dataset.status;updateOrderTabs();renderCustomerOrders();}));
 
 function subscribeCustomerOrders(){
   if(ordersUnsubscribe){ordersUnsubscribe();ordersUnsubscribe=null;}
@@ -249,9 +284,18 @@ function getProductSizes(product){
   const sizes=Array.isArray(product?.sizes)?product.sizes.filter(Boolean):[];
   return sizes.length?sizes:["S","M","L","XL"];
 }
-function getStock(product){return Math.max(0,Number(product?.stock||0));}
+function getSizeStockMap(product){
+  const map={};
+  if(product?.sizeStock&&typeof product.sizeStock==="object"){Object.entries(product.sizeStock).forEach(([size,value])=>map[size]=Math.max(0,Number(value||0)));}
+  return map;
+}
+function getStock(product,size=selectedSize){
+  const map=getSizeStockMap(product);
+  if(Object.keys(map).length&&size) return Math.max(0,Number(map[size]||0));
+  return Math.max(0,Number(product?.stock||0));
+}
 function updateQuantityUI(){
-  const stock=getStock(currentProduct);
+  const stock=getStock(currentProduct,selectedSize);
   currentQuantity=Math.min(Math.max(1,currentQuantity),Math.max(1,stock));
   document.getElementById("quantity").textContent=stock?currentQuantity:"0";
   document.getElementById("stockStatus").textContent=stock?`${stock} available`:"Sold out";
@@ -266,9 +310,11 @@ function openProduct(id){
   document.getElementById("modalImage").src=currentProduct.image;document.getElementById("modalImage").alt=currentProduct.name;
   document.getElementById("modalCategory").textContent=currentProduct.category;document.getElementById("modalName").textContent=currentProduct.name;
   document.getElementById("modalPrice").textContent=formatPrice(currentProduct.price);document.getElementById("modalDescription").textContent=currentProduct.description||"";
-  document.getElementById("productSizes").innerHTML=sizes.map(size=>`<button type="button" data-size="${String(size).replace(/"/g,"&quot;")}">${size}</button>`).join("");
-  document.querySelectorAll("#productSizes button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("#productSizes button").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedSize=b.dataset.size;updateQuantityUI();}));
-  document.querySelectorAll("#productSizes button")[0]?.classList.add("selected");
+  const sizeStock=getSizeStockMap(currentProduct);
+  document.getElementById("productSizes").innerHTML=sizes.map(size=>{const available=Object.keys(sizeStock).length?Number(sizeStock[size]||0):getStock(currentProduct,size);return `<button type="button" data-size="${String(size).replace(/"/g,"&quot;")}" ${available<=0?"disabled":""}>${size}${available<=0?" · Sold out":""}</button>`}).join("");
+  document.querySelectorAll("#productSizes button").forEach(b=>b.addEventListener("click",()=>{if(b.disabled)return;document.querySelectorAll("#productSizes button").forEach(x=>x.classList.remove("selected"));b.classList.add("selected");selectedSize=b.dataset.size;currentQuantity=1;updateQuantityUI();}));
+  const firstAvailable=[...document.querySelectorAll("#productSizes button")].find(b=>!b.disabled);
+  if(firstAvailable){firstAvailable.classList.add("selected");selectedSize=firstAvailable.dataset.size;}
   updateQuantityUI();productModal.classList.add("show");
 }
 document.getElementById("modalClose").addEventListener("click",()=>productModal.classList.remove("show"));productModal.addEventListener("click",e=>{if(e.target===productModal)productModal.classList.remove("show")});
@@ -276,9 +322,9 @@ document.querySelectorAll(".sizes button").forEach(b=>b.addEventListener("click"
 document.getElementById("plusBtn").addEventListener("click",()=>{const stock=getStock(currentProduct);if(currentQuantity<stock){currentQuantity++;updateQuantityUI();}});
 document.getElementById("minusBtn").addEventListener("click",()=>{if(currentQuantity>1){currentQuantity--;updateQuantityUI();}});
 document.getElementById("addModalBtn").addEventListener("click",()=>{
-  if(!currentProduct||!selectedSize)return;const stock=getStock(currentProduct);if(!stock){alert("This product is sold out.");return;}
+  if(!currentProduct||!selectedSize)return;const stock=getStock(currentProduct,selectedSize);if(!stock){alert(`Size ${selectedSize} is sold out.`);return;}
   const existing=cart.find(i=>i.id===currentProduct.id&&i.size===selectedSize);const existingQty=existing?.quantity||0;
-  if(existingQty+currentQuantity>stock){alert(`Only ${stock} item${stock===1?"":"s"} available.`);return;}
+  if(existingQty+currentQuantity>stock){alert(`Only ${stock} item${stock===1?"":"s"} available in size ${selectedSize}.`);return;}
   if(existing)existing.quantity+=currentQuantity;else cart.push({id:currentProduct.id,name:currentProduct.name,price:currentProduct.price,cost:currentProduct.cost||0,image:currentProduct.image,size:selectedSize,quantity:currentQuantity});
   saveCart();updateCart();productModal.classList.remove("show");openCart();
 });
@@ -287,7 +333,43 @@ function updateCart(){const qty=cart.reduce((t,i)=>t+i.quantity,0);cartCount.tex
 function openCart(){cartPanel.classList.add("open");cartOverlay.classList.add("show")}function closeCart(){cartPanel.classList.remove("open");cartOverlay.classList.remove("show")}
 document.getElementById("cartBtn").addEventListener("click",openCart);document.getElementById("closeCart").addEventListener("click",closeCart);cartOverlay.addEventListener("click",closeCart);
 
-document.getElementById("checkoutBtn").addEventListener("click",()=>{if(!cart.length){alert("Your cart is empty.");return}if(!currentUser){closeCart();openAccount("login");alert("Please login or create an account before checkout.");return}if(!hasCompleteProfile()){closeCart();openProfileForm();alert("Please complete your name, address, and contact number first.");return}document.getElementById("checkoutTotal").textContent=formatPrice(cart.reduce((s,i)=>s+i.price*i.quantity,0));closeCart();document.getElementById("customerName").value=currentProfile.name;document.getElementById("customerPhone").value=currentProfile.phone;document.getElementById("customerAddress").value=currentProfile.address;checkoutOverlay.classList.add("show")});
+function updateDeliveryFee(){
+  const municipality=customerMunicipality?.value||"";
+  const barangay=customerBarangay?.value||"";
+  const fee=Number(DELIVERY_ZONES[municipality]?.[barangay]??0);
+  if(deliveryFeeEl)deliveryFeeEl.textContent=fee?formatPrice(fee):"FREE";
+  if(deliveryFeeNote)deliveryFeeNote.textContent=barangay?(fee?`Delivery to ${barangay}, ${municipality}`:`Free delivery within Jagna`):"Select your barangay to calculate.";
+  return fee;
+}
+function updateCheckoutTotal(){
+  const subtotalAmount=cart.reduce((s,i)=>s+Number(i.price||0)*Number(i.quantity||0),0);
+  const fee=updateDeliveryFee();
+  if(checkoutTotalEl)checkoutTotalEl.textContent=formatPrice(subtotalAmount+fee);
+}
+customerMunicipality?.addEventListener("change",()=>{
+  const list=DELIVERY_ZONES[customerMunicipality.value]||{};
+  const entries=Object.entries(list).sort((a,b)=>a[0].localeCompare(b[0]));
+  customerBarangay.innerHTML='<option value="">Select barangay</option>'+entries.map(([name])=>`<option value="${name.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}">${name}</option>`).join("");
+  customerBarangay.disabled=!entries.length;
+  updateCheckoutTotal();
+});
+customerBarangay?.addEventListener("change",updateCheckoutTotal);
+
+document.getElementById("checkoutBtn").addEventListener("click",()=>{
+  if(!cart.length){alert("Your cart is empty.");return}
+  if(!currentUser){closeCart();openAccount("login");alert("Please login or create an account before checkout.");return}
+  if(!hasCompleteProfile()){closeCart();openProfileForm();alert("Please complete your name, address, and contact number first.");return}
+  customerName.value=currentProfile.name||currentUser.displayName||"";
+  customerPhone.value=currentProfile.phone||"";
+  customerMunicipality.value="";
+  customerBarangay.innerHTML='<option value="">Select municipality first</option>';
+  customerBarangay.disabled=true;
+  customerLandmark.value="";
+  updateDeliveryFee();
+  updateCheckoutTotal();
+  closeCart();
+  checkoutOverlay.classList.add("show");
+});
 document.getElementById("closeCheckout").addEventListener("click",()=>checkoutOverlay.classList.remove("show"));
 
 document.getElementById("checkoutForm").addEventListener("submit",async e=>{
@@ -296,8 +378,14 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
   if(!cart.length){showError("Your cart is empty.");return;}
 
   const orderId="KH"+Date.now().toString().slice(-6)+Math.random().toString(36).slice(2,6).toUpperCase();
+  const municipality=customerMunicipality.value;
+  const barangay=customerBarangay.value;
+  const landmark=customerLandmark.value.trim();
+  const deliveryFee=Number(DELIVERY_ZONES[municipality]?.[barangay]??0);
+  if(!municipality||!barangay||!landmark){showError("Please complete your municipality, barangay, and landmark.");return;}
   const orderItems=cart.map(i=>({id:i.id,name:i.name,price:Number(i.price||0),cost:Number(i.cost||0),image:i.image,size:i.size,quantity:Number(i.quantity||0)}));
-  const total=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+  const subtotalAmount=cart.reduce((s,i)=>s+i.price*i.quantity,0);
+  const total=subtotalAmount+deliveryFee;
   const orderRef=doc(db,"orders",orderId);
 
   try{
@@ -312,30 +400,40 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
         const id=uniqueIds[index];
         if(!snap.exists())throw new Error(`PRODUCT_NOT_FOUND:${id}`);
         const data=snap.data();
-        const stock=Math.max(0,Number(data.stock||0));
+        const sizeStock=getSizeStockMap(data);
+        const hasSizeStock=Object.keys(sizeStock).length>0;
+        // For per-size inventory, calculate the master stock from the size counts.
+        // This keeps legacy/mismatched product.stock values from causing a false permission error.
+        const stock=hasSizeStock
+          ? Object.values(sizeStock).reduce((sum,value)=>sum+Math.max(0,Number(value||0)),0)
+          : Math.max(0,Number(data.stock||0));
         if(data.visible===false||stock<=0)throw new Error(`SOLD_OUT:${id}`);
-        stockMap[id]={ref:productRefs[index],data,stock};
+        stockMap[id]={ref:productRefs[index],data,stock,sizeStock,hasSizeStock};
       });
 
       for(const item of orderItems){
         const record=stockMap[item.id];
         if(!record)throw new Error(`PRODUCT_NOT_FOUND:${item.id}`);
         const requested=Number(item.quantity||0);
-        if(requested<1||requested>record.stock)throw new Error(`INSUFFICIENT_STOCK:${item.id}:${record.stock}`);
+        const available=record.hasSizeStock?Math.max(0,Number(record.sizeStock[item.size]||0)):record.stock;
+        if(requested<1||requested>available)throw new Error(`INSUFFICIENT_STOCK:${item.id}:${item.size}:${available}`);
+        if(record.hasSizeStock)record.sizeStock[item.size]=available-requested;
         record.stock-=requested;
       }
 
       const order={
         id:orderId,
-        customer:{uid:currentUser.uid,name:customerName.value.trim(),phone:customerPhone.value.trim(),address:customerAddress.value.trim(),payment:paymentMethod.value,photoURL:currentProfile?.photoURL||currentUser.photoURL||""},
+        customer:{uid:currentUser.uid,name:customerName.value.trim(),phone:customerPhone.value.trim(),municipality,barangay,landmark,address:`${barangay}, ${municipality} — ${landmark}`,payment:paymentMethod.value,photoURL:currentProfile?.photoURL||currentUser.photoURL||""},
         items:orderItems,
+        subtotal:subtotalAmount,
+        deliveryFee,
         total,
         createdAt:serverTimestamp(),
         date:new Date().toISOString(),
         status:"Pending"
       };
       transaction.set(orderRef,order);
-      Object.values(stockMap).forEach(record=>transaction.update(record.ref,{stock:record.stock,visible:record.stock>0,updatedAt:serverTimestamp()}));
+      Object.values(stockMap).forEach(record=>transaction.update(record.ref,{stock:record.stock,...(record.hasSizeStock?{sizeStock:record.sizeStock}:{}),visible:record.stock>0,updatedAt:serverTimestamp()}));
     });
 
     cart=[];saveCart();updateCart();checkoutOverlay.classList.remove("show");successOverlay.classList.add("show");e.target.reset();
@@ -343,7 +441,7 @@ document.getElementById("checkoutForm").addEventListener("submit",async e=>{
     console.error("Checkout transaction failed:",error);
     const message=String(error.message||"");
     if(message.startsWith("SOLD_OUT:"))showError("Sorry, one of the items in your cart just sold out.");
-    else if(message.startsWith("INSUFFICIENT_STOCK:")){const parts=message.split(":");showError(`Only ${parts[2]||0} item${parts[2]==="1"?"":"s"} left for one of the items in your cart.`);}
+    else if(message.startsWith("INSUFFICIENT_STOCK:")){const parts=message.split(":");showError(parts[2]?`Sorry, size ${parts[2]} only has ${parts[3]||0} available.`:`Sorry, an item in your cart has insufficient stock.`);}
     else if(message.startsWith("PRODUCT_NOT_FOUND:"))showError("One of the items in your cart is no longer available.");
     else if(error.code==="permission-denied")showError("We couldn't place the order because Firestore permissions need to be checked.");
     else showError("We couldn't place your order. Please try again.");

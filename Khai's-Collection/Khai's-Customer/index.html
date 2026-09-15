@@ -14,7 +14,7 @@
     <div class="nav-container">
         <a href="#" class="logo"><span>Khai's</span><small>COLLECTION</small></a>
         <nav class="nav-links">
-            <a href="#home">Home</a><a href="#shop">Shop</a><a href="#orders">My Orders</a><a href="#about">About</a><a href="#contact">Contact</a>
+            <a href="#home">Home</a><a href="#shop">Shop</a><button class="nav-order-btn" id="ordersNavBtn" type="button">My Orders</button><a href="#about">About</a><a href="#contact">Contact</a>
         </nav>
         <div class="nav-actions">
             <button class="account-btn" id="accountBtn"><span class="header-avatar" id="headerAvatar"><span class="brown-emoji">👤</span></span><span id="accountLabel">Account</span></button>
@@ -53,19 +53,29 @@
 </section>
 
 
-<section class="orders-section" id="orders">
-    <div class="section-heading">
-        <p class="eyebrow">ORDER TRACKING</p>
-        <h2>My Orders</h2>
-        <p class="section-muted">Track your latest orders just like a simple shopping app.</p>
+<div class="orders-page-overlay" id="ordersPageOverlay">
+    <div class="orders-page">
+        <div class="orders-page-header">
+            <div><p class="eyebrow">ORDER TRACKING</p><h2>My Orders</h2><p class="section-muted">Track your orders and see their latest status.</p></div>
+            <button class="modal-close" id="closeOrdersPage" type="button">✕</button>
+        </div>
+        <div class="order-status-tabs" id="orderStatusTabs">
+            <button class="order-status-tab active" data-status="All" type="button">All</button>
+            <button class="order-status-tab" data-status="Pending" type="button">Pending</button>
+            <button class="order-status-tab" data-status="Confirmed" type="button">Confirmed</button>
+            <button class="order-status-tab" data-status="Preparing" type="button">Preparing</button>
+            <button class="order-status-tab" data-status="Shipped" type="button">On the Way</button>
+            <button class="order-status-tab" data-status="Completed" type="button">Delivered</button>
+            <button class="order-status-tab" data-status="Cancelled" type="button">Cancelled</button>
+        </div>
+        <div id="customerOrders" class="customer-orders"></div>
+        <div id="ordersLoginHint" class="orders-login-hint">
+            <strong>Want to track your order?</strong>
+            <p>Login to your account to see your order status.</p>
+            <button class="outline-btn dark-outline" id="ordersLoginBtn">Login to Track Orders →</button>
+        </div>
     </div>
-    <div id="customerOrders" class="customer-orders"></div>
-    <div id="ordersLoginHint" class="orders-login-hint">
-        <strong>Want to track your order?</strong>
-        <p>Login to your account to see your order status.</p>
-        <button class="outline-btn dark-outline" id="ordersLoginBtn">Login to Track Orders →</button>
-    </div>
-</section>
+</div>
 
 <section class="contact-section" id="contact">
     <div class="contact-card">
@@ -200,7 +210,13 @@
         <form id="checkoutForm">
             <label>Full Name</label><input id="customerName" required placeholder="Your name">
             <label>Phone Number</label><input id="customerPhone" type="tel" required placeholder="09XXXXXXXXX">
-            <label>Delivery Address</label><textarea id="customerAddress" required placeholder="Complete address"></textarea>
+            <label>Municipality</label>
+            <select id="customerMunicipality" required><option value="">Select municipality</option><option value="Jagna">Jagna</option><option value="Duero">Duero</option><option value="Garcia Hernandez">Garcia Hernandez</option></select>
+            <label>Barangay</label>
+            <select id="customerBarangay" required disabled><option value="">Select municipality first</option></select>
+            <label>Landmark / Location Details</label>
+            <textarea id="customerLandmark" required placeholder="e.g. Near Jagna Public Market, beside ABC Store"></textarea>
+            <div class="delivery-fee-box"><div><span>Delivery Fee</span><small id="deliveryFeeNote">Select your barangay to calculate.</small></div><strong id="deliveryFee">₱0</strong></div>
             <label>Payment Method</label><select id="paymentMethod"><option value="COD">Cash on Delivery</option><option value="GCash">GCash</option></select>
             <div class="checkout-total"><span>Total</span><strong id="checkoutTotal">₱0</strong></div>
             <button type="submit" class="checkout-btn">Place Order</button>

@@ -252,3 +252,30 @@ img{max-width:100%;}
 
 /* ===== CANCELLED ORDER ===== */
 .order-cancelled{border-color:#ead2d2}.customer-cancelled{margin:20px 0 8px;padding:14px 16px;border-radius:10px;background:#fff4f4;border:1px solid #edd8d8;display:grid;gap:5px}.customer-cancelled strong{color:#8f4d4d;font-size:12px}.customer-cancelled span{color:#8d7770;font-size:11px;line-height:1.5}.cancelled-status strong{color:#8f4d4d!important}
+
+.sizes button:disabled{opacity:.45;cursor:not-allowed;text-decoration:line-through}
+
+
+/* ===== ORDERS + DELIVERY CHECKOUT ===== */
+.nav-order-btn{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:8px 0;}
+.orders-page-overlay{position:fixed;inset:0;z-index:3000;display:none;background:rgba(37,25,21,.68);padding:24px;overflow:auto;}
+.orders-page-overlay.show{display:flex;align-items:center;justify-content:center;}
+.orders-page{width:min(1000px,100%);max-height:92vh;overflow:auto;background:rgba(255,253,249,.98);border-radius:24px;padding:34px;box-shadow:0 35px 100px rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.7);}
+.orders-page-header{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;}
+.orders-page-header h2{font-family:"Playfair Display",serif;font-size:42px;margin-top:4px;}
+.order-status-tabs{display:flex;gap:8px;overflow-x:auto;padding:22px 0 16px;scrollbar-width:none;}
+.order-status-tabs::-webkit-scrollbar{display:none;}
+.order-status-tab{flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:999px;padding:10px 14px;font-size:11px;font-weight:800;color:var(--muted);cursor:pointer;}
+.order-status-tab.active{background:var(--lux);color:#fff;border-color:var(--lux);}
+.order-delivery-summary{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px dashed var(--line);color:var(--muted);font-size:11px;}
+.order-delivery-summary b{color:var(--lux);}
+.delivery-fee-box{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 15px;margin:8px 0 14px;background:var(--softbg);border:1px solid var(--line);border-radius:12px;}
+.delivery-fee-box span{display:block;font-weight:800;font-size:13px;color:var(--ink);}
+.delivery-fee-box small{display:block;color:var(--muted);font-size:10px;margin-top:3px;}
+.delivery-fee-box strong{font-size:18px;color:var(--lux);white-space:nowrap;}
+@media(max-width:600px){
+  .orders-page-overlay{padding:10px;}
+  .orders-page{max-height:94vh;padding:22px 16px;border-radius:20px;}
+  .orders-page-header h2{font-size:34px;}
+  .order-status-tab{padding:9px 12px;font-size:10px;}
+}

@@ -157,24 +157,52 @@ function renderProducts(){
  $("productAdminGrid").innerHTML=arr.map(p=>`<article class="admin-product ${p.visible!==false?"":"off"}">
  <img src="${p.image||fallbackImage}" alt="${p.name||"Product"}">
  <div class="admin-product-body"><div class="product-meta"><span>${p.category||"Other"}</span><span>${p.visible!==false?"Visible":"Hidden"}</span></div>
- <h3>${p.name||"Untitled"}</h3><div class="admin-size-list">${sizeLabels(p.sizes)}</div><div class="price-line"><strong>${money(p.price)}</strong><small>Cost ${money(p.cost)} · Stock ${Number(p.stock||0)}</small></div>
+ <h3>${p.name||"Untitled"}</h3><div class="admin-size-list">${sizeLabels(p.sizes,p.sizeStock)}</div><div class="price-line"><strong>${money(p.price)}</strong><small>Cost ${money(p.cost)} · Stock ${Number(p.stock||0)}</small></div>
  <div class="admin-actions"><button class="small-btn" onclick='editProduct(${JSON.stringify(p.id)})'>Edit</button><button class="small-btn" onclick='toggleProduct(${JSON.stringify(p.id)})'>${p.visible!==false?"Hide":"Show"}</button><button class="small-btn danger" onclick='deleteProduct(${JSON.stringify(p.id)})'>Delete</button></div></div></article>`).join("")||`<div class="empty-state">No products found.</div>`;
 }
 $("productSearch").addEventListener("input",renderProducts);$("productFilter").addEventListener("change",renderProducts);
 function getSelectedSizes(){
  return Array.from(document.querySelectorAll('#productSizes input[type="checkbox"]:checked')).map(input=>input.value);
 }
-function setSelectedSizes(sizes=[]){
+function normalizeSizeStock(sizeStock={}){
+ const out={};
+ Object.entries(sizeStock||{}).forEach(([size,value])=>{out[size]=Math.max(0,Number(value||0));});
+ return out;
+}
+function renderSizeStockEditor(sizeStock={}){
+ const selected=getSelectedSizes();
+ const existing=normalizeSizeStock(sizeStock);
+ const editor=$("sizeStockEditor");
+ if(!selected.length){editor.innerHTML='<div class="size-stock-empty">Select a size above to set its stock.</div>';$("productStock").value=0;return;}
+ editor.innerHTML=`<div class="size-stock-title"><strong>Stock per Size</strong><span>Set how many pieces are available for each selected size.</span></div><div class="size-stock-grid">${selected.map(size=>`<label class="size-stock-row"><span>${size}</span><input class="size-stock-input" data-size="${size.replace(/"/g,'&quot;')}" type="number" min="0" step="1" value="${existing[size]??0}"></label>`).join('')}</div>`;
+ editor.querySelectorAll('.size-stock-input').forEach(input=>input.addEventListener('input',updateTotalStock));
+ updateTotalStock();
+}
+function updateTotalStock(){
+ const total=Array.from(document.querySelectorAll('.size-stock-input')).reduce((sum,input)=>sum+Math.max(0,Number(input.value||0)),0);
+ $("productStock").value=total;
+}
+function getSizeStock(){
+ const out={};
+ document.querySelectorAll('.size-stock-input').forEach(input=>{out[input.dataset.size]=Math.max(0,Number(input.value||0));});
+ return out;
+}
+function setSelectedSizes(sizes=[],sizeStock={}){
  const selected=new Set(Array.isArray(sizes)?sizes:[]);
  document.querySelectorAll('#productSizes input[type="checkbox"]').forEach(input=>{input.checked=selected.has(input.value);});
+ renderSizeStockEditor(sizeStock);
 }
-function sizeLabels(sizes=[]){
- return Array.isArray(sizes)&&sizes.length?sizes.join(' · '):'No sizes selected';
+function sizeLabels(sizes=[],sizeStock={}){
+ if(!Array.isArray(sizes)||!sizes.length)return 'No sizes selected';
+ const stock=normalizeSizeStock(sizeStock);
+ return sizes.map(size=>Object.prototype.hasOwnProperty.call(stock,size)?`${size} (${stock[size]})`:size).join(' · ');
 }
+
+document.querySelectorAll('#productSizes input[type="checkbox"]').forEach(input=>input.addEventListener('change',()=>renderSizeStockEditor()));
 
 function openProductModal(id=null){
  $("productForm").reset();$("editProductId").value=id||"";
- setSelectedSizes([]);
+ setSelectedSizes([],{});
  $("imagePreviewWrap").hidden=true;$("imagePreview").removeAttribute("src");
  if(id!==null&&id!==""){
    const p=products.find(x=>String(x.id)===String(id));if(!p)return;
@@ -182,7 +210,7 @@ function openProductModal(id=null){
    $("productName").value=p.name||"";$("productCategory").value=p.category||"Tops";
    $("productStock").value=Number(p.stock||0);$("productPrice").value=Number(p.price||0);$("productCost").value=Number(p.cost||0);
    $("productDescription").value=p.description||"";$("productVisible").checked=p.visible!==false;
-   setSelectedSizes(p.sizes||[]);
+   setSelectedSizes(p.sizes||[],p.sizeStock||{});
    $("productImage").dataset.currentUrl=p.image||"";
    if(p.image){$("imagePreview").src=p.image;$("imagePreviewWrap").hidden=false;}
  } else {
@@ -199,7 +227,7 @@ $("productImage").addEventListener("change",e=>{
 });
 
 $("addProductBtn").addEventListener("click",()=>openProductModal());$("dashboardAdd").addEventListener("click",()=>{navigate("products");openProductModal()});
-$("closeProductModal").addEventListener("click",()=>$("productModal").classList.remove("show"));$("cancelProduct").addEventListener("click",()=>$("productModal").classList.remove("show"));
+$("closeProductModal").addEventListener("click",()=>$('productModal').classList.remove("show"));$("cancelProduct").addEventListener("click",()=>$('productModal').classList.remove("show"));
 $("productForm").addEventListener("submit",async e=>{
  e.preventDefault();
  const id=$("editProductId").value;
@@ -212,28 +240,17 @@ $("productForm").addEventListener("submit",async e=>{
      formData.append("file", file);
      formData.append("upload_preset", "Khai's_products");
      formData.append("folder", "khai-products");
-
-     const cloudinaryResponse = await fetch(
-       "https://api.cloudinary.com/v1_1/zeuidhev/image/upload",
-       { method: "POST", body: formData }
-     );
-
-     if (!cloudinaryResponse.ok) {
-       const details = await cloudinaryResponse.text();
-       console.error("Cloudinary upload failed:", details);
-       throw new Error("Cloudinary image upload failed.");
-     }
-
-     const uploaded = await cloudinaryResponse.json();
-     imageUrl = uploaded.secure_url || uploaded.url;
-     if (!imageUrl) throw new Error("Cloudinary did not return an image URL.");
+     const cloudinaryResponse = await fetch("https://api.cloudinary.com/v1_1/zeuidhev/image/upload",{method:"POST",body:formData});
+     if(!cloudinaryResponse.ok){const details=await cloudinaryResponse.text();console.error("Cloudinary upload failed:",details);throw new Error("Cloudinary image upload failed.");}
+     const uploaded=await cloudinaryResponse.json();imageUrl=uploaded.secure_url||uploaded.url;if(!imageUrl)throw new Error("Cloudinary did not return an image URL.");
    }
    const sizes=getSelectedSizes();
    if(!sizes.length){alert("Please select at least one available size.");return;}
-   const data={name:$("productName").value.trim(),category:$("productCategory").value,stock:Number($("productStock").value),price:Number($("productPrice").value),cost:Number($("productCost").value),sizes,image:imageUrl||fallbackImage,description:$("productDescription").value.trim(),visible:$("productVisible").checked,updatedAt:serverTimestamp()};
+   const sizeStock=getSizeStock();
+   const data={name:$("productName").value.trim(),category:$("productCategory").value,stock:Object.values(sizeStock).reduce((sum,n)=>sum+n,0),sizeStock,price:Number($("productPrice").value),cost:Number($("productCost").value),sizes,image:imageUrl||fallbackImage,description:$("productDescription").value.trim(),visible:$("productVisible").checked,updatedAt:serverTimestamp()};
    if(id){await updateDoc(doc(db,"products",id),data)}
    else{const productRef=doc(collection(db,"products"));await setDoc(productRef,{...data,id:productRef.id,createdAt:serverTimestamp()})}
-   $("productModal").classList.remove("show");$("productForm").reset();
+   $("productModal").classList.remove("show");$("productForm").reset();renderSizeStockEditor({});
  }catch(error){console.error("Save product error:",error);alert(`Couldn't save product. ${error.message || "Please try again."}`)}
 });
 window.editProduct=openProductModal;
@@ -290,20 +307,32 @@ $("confirmCancelOrder").addEventListener("click",async()=>{
       const uniqueItems=new Map();
       (latest.items||[]).forEach(item=>{
         const productId=String(item.id||"");
+        const size=String(item.size||"");
         const qty=Number(item.quantity||0);
-        if(productId&&qty>0) uniqueItems.set(productId,(uniqueItems.get(productId)||0)+qty);
+        if(productId&&size&&qty>0){
+          const key=`${productId}__${size}`;
+          uniqueItems.set(key,{productId,size,qty:(uniqueItems.get(key)?.qty||0)+qty});
+        }
       });
 
+      const productIds=[...new Set([...uniqueItems.values()].map(x=>x.productId))];
       const productSnaps=[];
-      for(const [productId,qty] of uniqueItems){
+      for(const productId of productIds){
         const ref=doc(db,"products",productId);
         const snap=await transaction.get(ref);
-        if(snap.exists()) productSnaps.push([ref,snap,qty]);
+        if(snap.exists()) productSnaps.push([ref,snap]);
       }
 
-      for(const [ref,snap,qty] of productSnaps){
-        const currentStock=Math.max(0,Number(snap.data().stock||0));
-        transaction.update(ref,{stock:currentStock+qty,visible:true,updatedAt:serverTimestamp()});
+      for(const [ref,snap] of productSnaps){
+        const data=snap.data();
+        const sizeStock=normalizeSizeStock(data.sizeStock||{});
+        let currentStock=Math.max(0,Number(data.stock||0));
+        for(const item of uniqueItems.values()){
+          if(item.productId!==String(data.id||ref.id))continue;
+          sizeStock[item.size]=Math.max(0,Number(sizeStock[item.size]||0)+item.qty);
+          currentStock+=item.qty;
+        }
+        transaction.update(ref,{stock:currentStock,sizeStock,visible:true,updatedAt:serverTimestamp()});
       }
 
       transaction.update(orderRef,{status:"Cancelled",cancellationReason:finalReason,cancelledAt:serverTimestamp(),updatedAt:serverTimestamp()});
@@ -316,9 +345,22 @@ $("closeOrderModal").addEventListener("click",()=>$("orderModal").classList.remo
 function renderInventory(){
  const units=products.reduce((s,p)=>s+Number(p.stock||0),0),low=products.filter(p=>p.stock>0&&p.stock<=3).length,sold=products.filter(p=>p.stock===0).length;
  $("totalUnits").textContent=units;$("lowStockCount").textContent=low;$("soldOutCount").textContent=sold;
- $("inventoryGrid").innerHTML=products.map(p=>`<div class="inventory-item"><img src="${p.image||fallbackImage}"><div class="grow"><strong>${p.name}</strong><small class="${p.stock<=3?"low":"good"}">${p.stock===0?"Sold out":p.stock<=3?"Low stock":"In stock"}</small></div><div class="stock-control"><button onclick='changeStock(${JSON.stringify(p.id)},-1)'>−</button><span>${Number(p.stock||0)}</span><button onclick='changeStock(${JSON.stringify(p.id)},1)'>+</button></div></div>`).join("");
+ $("inventoryGrid").innerHTML=products.map(p=>{
+   const sizeStock=normalizeSizeStock(p.sizeStock||{});
+   const sizes=Array.isArray(p.sizes)?p.sizes:[];
+   const sizeControls=sizes.length?sizes.map(size=>`<div class="inventory-size"><span>${size}</span><div class="stock-control"><button onclick='changeSizeStock(${JSON.stringify(p.id)},${JSON.stringify(size)},-1)'>−</button><span>${Number(sizeStock[size]||0)}</span><button onclick='changeSizeStock(${JSON.stringify(p.id)},${JSON.stringify(size)},1)'>+</button></div></div>`).join(""):"";
+   return `<div class="inventory-item"><img src="${p.image||fallbackImage}"><div class="grow"><strong>${p.name}</strong><small class="${p.stock<=3?"low":"good"}">${p.stock===0?"Sold out":p.stock<=3?"Low stock":"In stock"}</small><div class="inventory-sizes">${sizeControls}</div></div><b class="inventory-total">${Number(p.stock||0)} total</b></div>`;
+ }).join("");
 }
-window.changeStock=async(id,delta)=>{const p=products.find(x=>String(x.id)===String(id));if(!p)return;const next=Math.max(0,Number(p.stock||0)+delta);try{await updateDoc(doc(db,"products",id),{stock:next,updatedAt:serverTimestamp()})}catch(error){console.error(error);alert("Couldn't update stock.")}};
+window.changeSizeStock=async(id,size,delta)=>{
+ const p=products.find(x=>String(x.id)===String(id));if(!p)return;
+ const sizeStock=normalizeSizeStock(p.sizeStock||{});
+ const current=Math.max(0,Number(sizeStock[size]||0));
+ const next=Math.max(0,current+delta);
+ sizeStock[size]=next;
+ const total=Object.values(sizeStock).reduce((sum,n)=>sum+n,0);
+ try{await updateDoc(doc(db,"products",id),{sizeStock,stock:total,visible:total>0,updatedAt:serverTimestamp()})}catch(error){console.error(error);alert("Couldn't update stock.")}
+};
 
 async function resetAnalytics(){
   if(!ownerReady)return;

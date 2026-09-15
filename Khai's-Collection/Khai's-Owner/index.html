@@ -114,11 +114,13 @@
       <div class="form-grid">
         <div class="full"><label>Product Name</label><input id="productName" required placeholder="e.g. Soft Linen Blouse"></div>
         <div><label>Category</label><select id="productCategory"><option>Tops</option><option>Dresses</option><option>Bottoms</option><option>Sets</option><option>New</option></select></div>
-        <div><label>Stock</label><input id="productStock" type="number" min="0" required value="10"></div>
+        <div><label>Total Stock</label><input id="productStock" type="number" min="0" readonly value="0"><small class="upload-hint">Automatically calculated from each size.</small></div>
         <div><label>Selling Price</label><input id="productPrice" type="number" min="0" required placeholder="399"></div>
         <div><label>Cost Price</label><input id="productCost" type="number" min="0" required placeholder="220"></div>
         <div class="full"><label>Available Sizes</label><div class="size-options" id="productSizes">
+          <label class="size-option"><input type="checkbox" value="XS"><span>XS</span></label>
           <label class="size-option"><input type="checkbox" value="S"><span>S</span></label>
+          <label class="size-option"><input type="checkbox" value="XS to S"><span>XS to S</span></label>
           <label class="size-option"><input type="checkbox" value="M"><span>M</span></label>
           <label class="size-option"><input type="checkbox" value="L"><span>L</span></label>
           <label class="size-option"><input type="checkbox" value="XL"><span>XL</span></label>
@@ -129,7 +131,9 @@
           <label class="size-option"><input type="checkbox" value="L to XL"><span>L to XL</span></label>
           <label class="size-option"><input type="checkbox" value="XL to XXL"><span>XL to XXL</span></label>
           <label class="size-option"><input type="checkbox" value="XXL to XXXL"><span>XXL to XXXL</span></label>
-        </div><small class="upload-hint">Select all sizes available for this product.</small></div>
+        </div>
+        <div class="size-stock-editor full" id="sizeStockEditor"></div>
+        <small class="upload-hint">Select the sizes available, then enter the stock for each size. Example: XS 8 · S 5 · M 2.</small></div>
         <div class="full"><label>Product Image</label><input id="productImage" type="file" accept="image/*"><small class="upload-hint">Choose a photo from your phone or computer.</small><div id="imagePreviewWrap" class="image-preview-wrap" hidden><img id="imagePreview" alt="Image preview"></div></div>
         <div class="full"><label>Description</label><textarea id="productDescription" placeholder="Short product description"></textarea></div>
       </div>
